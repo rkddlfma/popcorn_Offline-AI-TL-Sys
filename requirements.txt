@@ -8,3 +8,5 @@ bitsandbytes>=0.43.0
 sounddevice
 numpy
 aiohttp
+python-multipart>=0.0.9
+aiofiles>=23.0.0
