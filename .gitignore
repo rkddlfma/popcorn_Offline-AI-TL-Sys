@@ -25,6 +25,10 @@ stt_vs_server.pptx
 .claude/
 .idea/
 
+# 업로드/생성 파일
+uploads/
+subtitles/
+
 # 모델 캐시 (용량 큼)
 *.bin
 *.safetensors

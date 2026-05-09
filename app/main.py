@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.core.model_manager import create_translation_backend
-from app.routers import translate, ws
+from app.routers import subtitle, translate, ws
 from app.services.stt import STTService
 from app.services.translation import TranslationService
 
@@ -46,6 +46,7 @@ app = FastAPI(
 
 app.include_router(translate.router)
 app.include_router(ws.router)
+app.include_router(subtitle.router)
 
 
 @app.get("/health")
