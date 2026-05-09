@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 import torch
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.model_manager import create_translation_backend
@@ -48,7 +50,14 @@ app.include_router(translate.router)
 app.include_router(ws.router)
 app.include_router(subtitle.router)
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "backend": settings.translate_backend}
+
+
+@app.get("/")
+async def index():
+    return FileResponse("static/index.html")
