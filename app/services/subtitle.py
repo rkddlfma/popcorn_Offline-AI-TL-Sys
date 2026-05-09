@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 from pathlib import Path
 
 JOBS: dict = {}  # job_id → {status, srt_path, error}
@@ -17,19 +18,20 @@ async def process_video(
     try:
         JOBS[job_id] = {"status": "extracting"}
 
-        # ffmpeg로 16kHz mono WAV 추출
-        proc = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-i", str(video_path),
-            "-ar", "16000", "-ac", "1", "-y", str(audio_path),
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
+        # ffmpeg로 16kHz mono WAV 추출 (subprocess.run → thread executor로 안전하게 실행)
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: subprocess.run(
+                ["ffmpeg", "-i", str(video_path), "-ar", "16000", "-ac", "1", "-y", str(audio_path)],
+                capture_output=True,
+            ),
         )
-        await proc.wait()
-        if proc.returncode != 0:
-            raise RuntimeError("ffmpeg 오디오 추출 실패")
+        if result.returncode != 0:
+            raise RuntimeError("ffmpeg 오디오 추출 실패: " + result.stderr.decode(errors="ignore"))
 
         JOBS[job_id]["status"] = "transcribing"
-        segments = await asyncio.get_event_loop().run_in_executor(
+        segments = await loop.run_in_executor(
             None, stt_service.transcribe_segments, str(audio_path), src_lang
         )
 
