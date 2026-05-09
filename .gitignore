@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# 환경 설정
+.env
+
+# 불필요한 개발 파일
+server.py
+stt_translate_test.py
+Whisper_test.py
+benchmark.py
+benchmark_result.png
+benchmark_after.png
+make_ppt.py
+stt_vs_server.pptx
+
+# IDE / 툴
+.vscode/
+.claude/
+.idea/
+
+# 모델 캐시 (용량 큼)
+*.bin
+*.safetensors
+*.gguf

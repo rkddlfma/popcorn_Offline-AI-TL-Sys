@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TranslateGemma 실시간 자막</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    header {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; color: #a78bfa; }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #6b7280;
+      transition: background 0.3s;
+    }
+    .dot.connected { background: #34d399; }
+    .dot.listening { background: #f59e0b; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .controls {
+      width: 100%;
+      max-width: 800px;
+      background: #1e2130;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    select {
+      background: #2d3148;
+      color: #e2e8f0;
+      border: 1px solid #3d4268;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .arrow { color: #6b7280; font-size: 1.2rem; }
+
+    button {
+      margin-left: auto;
+      padding: 9px 24px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #toggleBtn {
+      background: #7c3aed;
+      color: #fff;
+    }
+    #toggleBtn:hover { background: #6d28d9; }
+    #toggleBtn.stop { background: #dc2626; }
+    #toggleBtn.stop:hover { background: #b91c1c; }
+
+    .subtitle-box {
+      width: 100%;
+      max-width: 800px;
+      background: #1e2130;
+      border-radius: 12px;
+      padding: 24px;
+      min-height: 160px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    #currentSrc {
+      font-size: 1.1rem;
+      color: #94a3b8;
+      min-height: 28px;
+    }
+
+    #currentTgt {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      min-height: 36px;
+    }
+
+    .history {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .history-label {
+      font-size: 0.75rem;
+      color: #4b5563;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #1e2130;
+    }
+
+    .history-item {
+      background: #1a1d2e;
+      border-radius: 8px;
+      padding: 12px 16px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .history-item .src { font-size: 0.85rem; color: #6b7280; margin-bottom: 4px; }
+    .history-item .tgt { font-size: 1rem; color: #c4b5fd; }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      background: #3b1212;
+      border-radius: 6px;
+    }
+
+    #serverUrl {
+      background: #2d3148;
+      color: #e2e8f0;
+      border: 1px solid #3d4268;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      width: 220px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>TranslateGemma 실시간 자막</h1>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">연결 안됨</span>
+  </div>
+</header>
+
+<div class="controls">
+  <input id="serverUrl" type="text" value="ws://localhost:8000/ws/subtitle" placeholder="WebSocket URL" />
+  <select id="srcLang">
+    <option value="ko">한국어</option>
+    <option value="en">English</option>
+    <option value="ja">日本語</option>
+    <option value="zh">中文</option>
+  </select>
+  <span class="arrow">→</span>
+  <select id="tgtLang">
+    <option value="en">English</option>
+    <option value="ko">한국어</option>
+    <option value="ja">日本語</option>
+    <option value="zh">中文</option>
+  </select>
+  <button id="toggleBtn" onclick="toggle()">연결 시작</button>
+</div>
+
+<div class="subtitle-box">
+  <div>
+    <div class="label">원문</div>
+    <div id="currentSrc">—</div>
+  </div>
+  <div>
+    <div class="label">번역</div>
+    <div id="currentTgt">—</div>
+  </div>
+</div>
+
+<div class="history">
+  <div class="history-label">이전 자막</div>
+  <div id="historyList"></div>
+</div>
+
+<script>
+  const SAMPLE_RATE   = 16000;
+  const VAD_THRESHOLD = 0.01;
+  const SILENCE_LIMIT = 8;      // 무음 청크 수 (~0.7초)
+  const CHUNK_SIZE    = 4096;
+  const SEND_INTERVAL = 5000;   // 말하는 도중 5초마다 중간 전송
+
+  let ws        = null;
+  let audioCtx  = null;
+  let processor = null;
+  let stream    = null;
+  let running   = false;
+  let sending   = false;
+
+  let speaking     = false;
+  let silenceCount = 0;
+  let audioChunks  = [];
+  let lastSendTime = 0;
+
+  function toggle() {
+    running ? stop() : start();
+  }
+
+  async function start() {
+    const url     = document.getElementById('serverUrl').value;
+    const srcLang = document.getElementById('srcLang').value;
+    const tgtLang = document.getElementById('tgtLang').value;
+
+    setStatus('connecting', '연결 중...');
+
+    ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = async () => {
+      ws.send(JSON.stringify({ src_lang: srcLang, tgt_lang: tgtLang }));
+      setStatus('connected', '연결됨');
+      await startMic();
+      running = true;
+      document.getElementById('toggleBtn').textContent = '중지';
+      document.getElementById('toggleBtn').classList.add('stop');
+    };
+
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'stt') {
+        document.getElementById('currentSrc').textContent = data.text;
+      } else if (data.type === 'translation') {
+        // 이전 번역을 히스토리로 이동
+        const prevSrc = document.getElementById('currentSrc').textContent;
+        const prevTgt = document.getElementById('currentTgt').textContent;
+        if (prevTgt && prevTgt !== '—') {
+          addHistory(prevSrc, prevTgt);
+        }
+        document.getElementById('currentTgt').textContent = data.text;
+      } else if (data.type === 'error') {
+        showError(data.text);
+      }
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected', '연결 끊김');
+      stop();
+    };
+
+    ws.onerror = () => {
+      setStatus('disconnected', '연결 오류');
+      stop();
+    };
+  }
+
+  function stop() {
+    running = false;
+    if (processor) { processor.disconnect(); processor = null; }
+    if (stream)    { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    if (audioCtx)  { audioCtx.close(); audioCtx = null; }
+    if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+    ws = null;
+    speaking = false; silenceCount = 0; audioChunks = [];
+    setStatus('disconnected', '연결 안됨');
+    document.getElementById('toggleBtn').textContent = '연결 시작';
+    document.getElementById('toggleBtn').classList.remove('stop');
+  }
+
+  async function startMic() {
+    stream   = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new AudioContext();
+    const source = audioCtx.createMediaStreamSource(stream);
+    processor    = audioCtx.createScriptProcessor(CHUNK_SIZE, 1, 1);
+
+    processor.onaudioprocess = async (e) => {
+      const input = e.inputBuffer.getChannelData(0);
+      const rms   = Math.sqrt(input.reduce((s, x) => s + x * x, 0) / input.length);
+
+      if (rms > VAD_THRESHOLD) {
+        if (!speaking) {
+          speaking = true;
+          lastSendTime = Date.now();
+          setStatus('listening', '음성 감지 중...');
+        }
+        silenceCount = 0;
+        audioChunks.push(new Float32Array(input));
+
+        // 말하는 도중 2.5초마다 중간 전송 (서버 버퍼에서 문장 조합)
+        if (!sending && Date.now() - lastSendTime >= SEND_INTERVAL) {
+          lastSendTime = Date.now();
+          await sendAudio();
+        }
+      } else if (speaking) {
+        audioChunks.push(new Float32Array(input));
+        silenceCount++;
+        if (silenceCount >= SILENCE_LIMIT) {
+          speaking = false;
+          silenceCount = 0;
+          setStatus('connected', '연결됨');
+          await sendAudio();
+        }
+      }
+    };
+
+    source.connect(processor);
+    processor.connect(audioCtx.destination);
+  }
+
+  async function sendAudio() {
+    if (audioChunks.length === 0 || sending) return;
+    sending = true;
+
+    const chunks = audioChunks;
+    audioChunks = [];
+
+    const total    = chunks.reduce((s, c) => s + c.length, 0);
+    const combined = new Float32Array(total);
+    let offset = 0;
+    for (const c of chunks) { combined.set(c, offset); offset += c.length; }
+
+    const resampled = await resampleTo16k(combined, audioCtx.sampleRate);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(resampled.buffer);
+    }
+    sending = false;
+  }
+
+  async function resampleTo16k(samples, fromRate) {
+    if (fromRate === SAMPLE_RATE) return samples;
+
+    const buf = audioCtx.createBuffer(1, samples.length, fromRate);
+    buf.getChannelData(0).set(samples);
+
+    const targetLen  = Math.round(samples.length * SAMPLE_RATE / fromRate);
+    const offlineCtx = new OfflineAudioContext(1, targetLen, SAMPLE_RATE);
+    const src        = offlineCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(offlineCtx.destination);
+    src.start();
+
+    const rendered = await offlineCtx.startRendering();
+    return rendered.getChannelData(0);
+  }
+
+  function setStatus(state, text) {
+    const dot = document.getElementById('dot');
+    dot.className = 'dot';
+    if (state === 'connected')   dot.classList.add('connected');
+    if (state === 'listening')   dot.classList.add('listening');
+    document.getElementById('statusText').textContent = text;
+  }
+
+  function addHistory(src, tgt) {
+    const list = document.getElementById('historyList');
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `<div class="src">${escHtml(src)}</div><div class="tgt">${escHtml(tgt)}</div>`;
+    list.prepend(item);
+    // 최대 20개 유지
+    while (list.children.length > 20) list.removeChild(list.lastChild);
+  }
+
+  function showError(msg) {
+    const list = document.getElementById('historyList');
+    const item = document.createElement('div');
+    item.className = 'error-msg';
+    item.textContent = '오류: ' + msg;
+    list.prepend(item);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>
