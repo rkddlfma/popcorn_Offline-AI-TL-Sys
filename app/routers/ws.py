@@ -12,6 +12,9 @@ router = APIRouter(tags=["websocket"])
 SENTENCE_END = re.compile(r'(?<=[.!?,，。！？])\s*')
 MIN_TRANSLATE_CHARS = 6
 
+# 연결된 학생 뷰어 목록
+_viewers: set[WebSocket] = set()
+
 
 def _split_sentences(text: str) -> tuple[list[str], str]:
     parts = SENTENCE_END.split(text.strip())
@@ -23,20 +26,20 @@ def _split_sentences(text: str) -> tuple[list[str], str]:
     return complete, remainder
 
 
+async def _broadcast(message: dict) -> None:
+    """연결된 모든 뷰어에게 메시지 전송."""
+    disconnected = set()
+    for viewer in _viewers:
+        try:
+            await viewer.send_text(json.dumps(message))
+        except Exception:
+            disconnected.add(viewer)
+    _viewers.difference_update(disconnected)
+
+
 @router.websocket("/ws/subtitle")
 async def subtitle_ws(websocket: WebSocket):
-    """실시간 자막 WebSocket 엔드포인트.
-
-    프로토콜:
-      1) 연결 직후 클라이언트가 JSON 설정 전송 (1회)
-         {"src_lang": "ko", "tgt_lang": "en"}
-      2) 이후 오디오를 float32 바이너리 프레임으로 전송
-
-    서버 → 클라이언트:
-      {"type": "stt",         "text": "..."}
-      {"type": "translation", "text": "..."}
-      {"type": "error",       "text": "..."}
-    """
+    """교수용 WebSocket — 마이크 오디오 수신 → STT → 번역 → 브로드캐스트."""
     await websocket.accept()
     stt_service         = websocket.app.state.stt_service
     translation_service = websocket.app.state.translation_service
@@ -55,7 +58,10 @@ async def subtitle_ws(websocket: WebSocket):
         result = await translation_service.translate(text, src_lang, tgt_lang)
         if result.lower().startswith("please provide") or result.lower().startswith("i need the"):
             return False
-        await websocket.send_text(json.dumps({"type": "translation", "text": result}))
+        msg = {"type": "translation", "text": result}
+        # 교수 화면 + 모든 학생에게 동시 전송
+        await websocket.send_text(json.dumps(msg))
+        await _broadcast(msg)
         return True
 
     try:
@@ -67,7 +73,9 @@ async def subtitle_ws(websocket: WebSocket):
             if not stt_text.strip():
                 continue
 
-            await websocket.send_text(json.dumps({"type": "stt", "text": stt_text}))
+            stt_msg = {"type": "stt", "text": stt_text}
+            await websocket.send_text(json.dumps(stt_msg))
+            await _broadcast(stt_msg)
 
             text_buffer = (text_buffer + " " + stt_text).strip()
             if buffer_start is None:
@@ -97,3 +105,18 @@ async def subtitle_ws(websocket: WebSocket):
             await websocket.send_text(json.dumps({"type": "error", "text": str(e)}))
         except Exception:
             pass
+
+
+@router.websocket("/ws/viewer")
+async def viewer_ws(websocket: WebSocket):
+    """학생용 WebSocket — 번역 결과 수신만."""
+    await websocket.accept()
+    _viewers.add(websocket)
+    try:
+        while True:
+            # 연결 유지용 (클라이언트가 끊으면 예외 발생)
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _viewers.discard(websocket)
