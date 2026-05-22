@@ -18,8 +18,9 @@ class TranslationService:
         return await self._backend.translate(text, src_lang, tgt_lang)
 
     def _apply_glossary_hint(self, text: str, glossary: dict[str, str]) -> str:
-        """용어집 힌트를 텍스트 앞에 붙여서 모델에 전달합니다.
-        예) [용어집: AI→AI, 딥러닝→deep learning]\n안녕하세요...
-        """
-        terms = ", ".join(f"{k}→{v}" for k, v in glossary.items())
+        # 원문에 실제로 등장하는 용어만 필터링
+        matched = {k: v for k, v in glossary.items() if k in text}
+        if not matched:
+            return text
+        terms = ", ".join(f"{k}→{v}" for k, v in matched.items())
         return f"[용어집: {terms}]\n{text}"
