@@ -14,8 +14,8 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
       padding: 24px;
+      padding-top: 48px;
     }
 
     .status-bar {
@@ -27,6 +27,7 @@
       gap: 8px;
       font-size: 0.8rem;
       color: #6b7280;
+      z-index: 10;
     }
 
     .dot {
@@ -42,38 +43,60 @@
       50%       { opacity: 0.3; }
     }
 
-    .subtitle-area {
+    .subtitle-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 20px;
       max-width: 900px;
       width: 100%;
       margin: 0 auto;
     }
 
+    .subtitle-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      animation: appear 0.3s ease;
+    }
+
+    .subtitle-item.current .translated {
+      color: #fff;
+    }
+
+    .subtitle-item:not(.current) .translated {
+      color: #6b7280;
+    }
+
+    .subtitle-item:not(.current) .original {
+      display: none;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
     .original {
-      font-size: clamp(1rem, 3vw, 1.4rem);
-      color: #9ca3af;
-      min-height: 1.6em;
+      font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+      color: #4b5563;
       text-shadow: 0 1px 4px #000;
     }
 
     .translated {
-      font-size: clamp(1.4rem, 5vw, 2.8rem);
+      font-size: clamp(1.3rem, 4.5vw, 2.4rem);
       font-weight: 700;
-      color: #fff;
-      min-height: 1.4em;
       text-shadow: 0 2px 8px #000;
       line-height: 1.3;
     }
 
-    .translated.new {
-      animation: appear 0.3s ease;
-    }
-
-    @keyframes appear {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
+    /* STT 진행 중 표시 */
+    .stt-preview {
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: #374151;
+      font-style: italic;
+      max-width: 900px;
+      width: 100%;
+      margin: 8px auto 0;
     }
   </style>
 </head>
@@ -84,14 +107,40 @@
   <span id="statusText">연결 중...</span>
 </div>
 
-<div class="subtitle-area">
-  <div class="original"  id="original"></div>
-  <div class="translated" id="translated"></div>
-</div>
+<div class="subtitle-list" id="subtitleList"></div>
+<div class="stt-preview" id="sttPreview"></div>
 
 <script>
   const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl   = `${wsProto}//${location.host}/ws/viewer`;
+
+  let currentItem = null;
+  let pendingSrc  = '';
+
+  function addSubtitle(src, tgt) {
+    const list = document.getElementById('subtitleList');
+
+    // 이전 항목 흐리게
+    if (currentItem) {
+      currentItem.classList.remove('current');
+    }
+
+    const item = document.createElement('div');
+    item.className = 'subtitle-item current';
+    item.innerHTML = `
+      <div class="original">${escHtml(src)}</div>
+      <div class="translated">${escHtml(tgt)}</div>
+    `;
+    list.appendChild(item);
+    currentItem = item;
+
+    // 맨 아래로 스크롤
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
   function connect() {
     const ws = new WebSocket(wsUrl);
@@ -104,13 +153,12 @@
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
       if (data.type === 'stt') {
-        document.getElementById('original').textContent = data.text;
+        pendingSrc = data.text;
+        document.getElementById('sttPreview').textContent = data.text;
       } else if (data.type === 'translation') {
-        const el = document.getElementById('translated');
-        el.textContent = data.text;
-        el.classList.remove('new');
-        void el.offsetWidth; // reflow로 애니메이션 재실행
-        el.classList.add('new');
+        document.getElementById('sttPreview').textContent = '';
+        addSubtitle(pendingSrc, data.text);
+        pendingSrc = '';
       }
     };
 
