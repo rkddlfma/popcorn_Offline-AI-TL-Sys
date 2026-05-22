@@ -388,9 +388,11 @@
   const SILENCE_LIMIT = 8;
   const CHUNK_SIZE    = 4096;
   const SEND_INTERVAL = 5000;
+  const PREROLL_SIZE  = 4;  // 말 시작 직전 청크 수 (앞부분 잘림 방지)
 
   let ws, audioCtx, processor, stream, running = false, sending = false;
   let speaking = false, silenceCount = 0, audioChunks = [], lastSendTime = 0;
+  let prerollBuffer = [];
 
   function toggle() { running ? stop() : start(); }
 
@@ -438,7 +440,7 @@
     if (audioCtx)  { audioCtx.close(); audioCtx = null; }
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     ws = null;
-    speaking = false; silenceCount = 0; audioChunks = [];
+    speaking = false; silenceCount = 0; audioChunks = []; prerollBuffer = [];
     setStatus('disconnected', '연결 안됨');
     document.getElementById('toggleBtn').textContent = '연결 시작';
     document.getElementById('toggleBtn').classList.remove('stop');
@@ -455,7 +457,14 @@
       const rms   = Math.sqrt(input.reduce((s, x) => s + x * x, 0) / input.length);
 
       if (rms > VAD_THRESHOLD) {
-        if (!speaking) { speaking = true; lastSendTime = Date.now(); setStatus('listening', '음성 감지 중...'); }
+        if (!speaking) {
+          speaking = true;
+          lastSendTime = Date.now();
+          setStatus('listening', '음성 감지 중...');
+          // 프리롤 버퍼(말 시작 직전 청크)를 앞에 붙여서 앞부분 잘림 방지
+          audioChunks.push(...prerollBuffer);
+          prerollBuffer = [];
+        }
         silenceCount = 0;
         audioChunks.push(new Float32Array(input));
         if (!sending && Date.now() - lastSendTime >= SEND_INTERVAL) {
@@ -470,6 +479,10 @@
           setStatus('connected', '연결됨');
           await sendAudio();
         }
+      } else {
+        // 말하지 않는 동안 프리롤 버퍼 유지
+        prerollBuffer.push(new Float32Array(input));
+        if (prerollBuffer.length > PREROLL_SIZE) prerollBuffer.shift();
       }
     };
 

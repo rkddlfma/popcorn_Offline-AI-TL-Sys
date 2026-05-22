@@ -1,29 +1,14 @@
 import json
-import re
-import time
 
 import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.core.config import settings
-
 router = APIRouter(tags=["websocket"])
 
-SENTENCE_END = re.compile(r'(?<=[.!?,，。！？])\s*')
 MIN_TRANSLATE_CHARS = 6
 
 # 연결된 학생 뷰어 목록
 _viewers: set[WebSocket] = set()
-
-
-def _split_sentences(text: str) -> tuple[list[str], str]:
-    parts = SENTENCE_END.split(text.strip())
-    complete = [p for p in parts[:-1] if p.strip()]
-    remainder = parts[-1].strip() if parts else ""
-    if remainder and remainder[-1] in set('.!?,，。！？'):
-        complete.append(remainder)
-        remainder = ""
-    return complete, remainder
 
 
 async def _broadcast(message: dict) -> None:
@@ -49,9 +34,6 @@ async def subtitle_ws(websocket: WebSocket):
     tgt_lang = config.get("tgt_lang", "en")
     glossary = config.get("glossary") or None  # {"원문": "번역"} | None
 
-    text_buffer:  str         = ""
-    buffer_start: float | None = None
-
     async def translate_and_send(text: str) -> bool:
         text = text.strip()
         if len(text) < MIN_TRANSLATE_CHARS:
@@ -60,7 +42,6 @@ async def subtitle_ws(websocket: WebSocket):
         if result.lower().startswith("please provide") or result.lower().startswith("i need the"):
             return False
         msg = {"type": "translation", "text": result}
-        # 교수 화면 + 모든 학생에게 동시 전송
         await websocket.send_text(json.dumps(msg))
         await _broadcast(msg)
         return True
@@ -78,26 +59,8 @@ async def subtitle_ws(websocket: WebSocket):
             await websocket.send_text(json.dumps(stt_msg))
             await _broadcast(stt_msg)
 
-            text_buffer = (text_buffer + " " + stt_text).strip()
-            if buffer_start is None:
-                buffer_start = time.time()
-
-            sentences, remainder = _split_sentences(text_buffer)
-
-            for sentence in sentences:
-                ok = await translate_and_send(sentence)
-                if not ok:
-                    remainder = (sentence + " " + remainder).strip()
-
-            text_buffer = remainder
-
-            if text_buffer and buffer_start and (time.time() - buffer_start) >= settings.max_buffer_sec:
-                ok = await translate_and_send(text_buffer)
-                if ok:
-                    text_buffer  = ""
-                    buffer_start = None
-            elif not text_buffer:
-                buffer_start = None
+            # STT 청크마다 바로 번역
+            await translate_and_send(stt_text)
 
     except WebSocketDisconnect:
         pass
