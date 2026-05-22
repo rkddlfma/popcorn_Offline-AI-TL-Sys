@@ -1,0 +1,12 @@
+.git
+.claude
+.vscode
+__pycache__
+*.pyc
+.env
+uploads/
+subtitles/
+*.mp4
+*.pptx
+*.png
+test_*.py

@@ -1,0 +1,17 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # 모델 캐시 공유 (재다운로드 방지)
+      - huggingface_cache:/root/.cache/huggingface
+      # 업로드/자막 파일 유지
+      - ./uploads:/app/uploads
+      - ./subtitles:/app/subtitles
+    restart: unless-stopped
+
+volumes:
+  huggingface_cache:
