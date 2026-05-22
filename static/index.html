@@ -178,6 +178,76 @@
     }
     #downloadBtn:hover { background: #047857; }
     #downloadBtn.visible { display: block; }
+
+    /* ── 용어집 ── */
+    .glossary-box {
+      background: #1e2130;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .glossary-header {
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #94a3b8;
+      user-select: none;
+    }
+    .glossary-header:hover { color: #e2e8f0; }
+
+    .glossary-body {
+      padding: 0 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .glossary-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .glossary-input-row input { flex: 1; min-width: 120px; }
+
+    .glossary-input-row button {
+      padding: 8px 16px;
+      background: #4c1d95;
+      color: #c4b5fd;
+    }
+    .glossary-input-row button:hover { background: #5b21b6; }
+
+    .glossary-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .glossary-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #2d3148;
+      border-radius: 20px;
+      padding: 4px 8px 4px 12px;
+      font-size: 0.85rem;
+      color: #c4b5fd;
+    }
+
+    .glossary-tag .rm-btn {
+      padding: 0;
+      background: none;
+      color: #6b7280;
+      font-size: 1rem;
+      line-height: 1;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .glossary-tag .rm-btn:hover { color: #f87171; }
   </style>
 </head>
 <body>
@@ -214,6 +284,22 @@
       <span id="statusText">연결 안됨</span>
     </div>
     <button id="toggleBtn" onclick="toggle()">연결 시작</button>
+  </div>
+
+  <div class="glossary-box">
+    <div class="glossary-header" onclick="toggleGlossary()">
+      <span>용어집 <span id="glossaryCount" style="color:#a78bfa"></span></span>
+      <span id="glossaryToggleIcon">▶</span>
+    </div>
+    <div class="glossary-body" id="glossaryBody" style="display:none">
+      <div class="glossary-input-row">
+        <input type="text" id="gSrc" placeholder="원문 (예: 머신러닝)" />
+        <span class="arrow">→</span>
+        <input type="text" id="gTgt" placeholder="번역 (예: machine learning)" />
+        <button onclick="addGlossaryTerm()">추가</button>
+      </div>
+      <div class="glossary-tags" id="glossaryTags"></div>
+    </div>
   </div>
 
   <div class="subtitle-box">
@@ -318,7 +404,8 @@
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = async () => {
-      ws.send(JSON.stringify({ src_lang: srcLang, tgt_lang: tgtLang }));
+      const gData = Object.keys(glossary).length > 0 ? glossary : null;
+      ws.send(JSON.stringify({ src_lang: srcLang, tgt_lang: tgtLang, glossary: gData }));
       setStatus('connected', '연결됨');
       await startMic();
       running = true;
@@ -443,6 +530,101 @@
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  /* ── 용어집 ── */
+  const DEFAULT_GLOSSARY = {
+    // 수업 일반
+    "강의":       "lecture",
+    "수업":       "class",
+    "교수":       "professor",
+    "조교":       "teaching assistant",
+    "학기":       "semester",
+    "중간고사":   "midterm exam",
+    "기말고사":   "final exam",
+    "과제":       "assignment",
+    "출석":       "attendance",
+    "발표":       "presentation",
+    "논문":       "paper",
+    "참고문헌":   "references",
+    // 학술 개념
+    "개요":       "overview",
+    "결론":       "conclusion",
+    "요약":       "summary",
+    "정의":       "definition",
+    "개념":       "concept",
+    "원리":       "principle",
+    "이론":       "theory",
+    "가설":       "hypothesis",
+    "연구":       "research",
+    "사례":       "case study",
+    // AI / CS
+    "인공지능":   "artificial intelligence",
+    "머신러닝":   "machine learning",
+    "딥러닝":     "deep learning",
+    "신경망":     "neural network",
+    "알고리즘":   "algorithm",
+    "데이터셋":   "dataset",
+    "역전파":     "backpropagation",
+    "경사하강법": "gradient descent",
+    "과적합":     "overfitting",
+    "손실함수":   "loss function",
+    // 수학 / 통계
+    "미분":       "differentiation",
+    "적분":       "integration",
+    "행렬":       "matrix",
+    "벡터":       "vector",
+    "확률":       "probability",
+    "통계":       "statistics",
+    "표준편차":   "standard deviation",
+    "회귀분석":   "regression analysis",
+  };
+
+  let glossary = { ...DEFAULT_GLOSSARY };
+
+  function toggleGlossary() {
+    const body = document.getElementById('glossaryBody');
+    const icon = document.getElementById('glossaryToggleIcon');
+    const open = body.style.display === 'none';
+    body.style.display = open ? '' : 'none';
+    icon.textContent   = open ? '▼' : '▶';
+  }
+
+  function addGlossaryTerm() {
+    const src = document.getElementById('gSrc').value.trim();
+    const tgt = document.getElementById('gTgt').value.trim();
+    if (!src || !tgt) return;
+    glossary[src] = tgt;
+    document.getElementById('gSrc').value = '';
+    document.getElementById('gTgt').value = '';
+    renderGlossaryTags();
+  }
+
+  function removeGlossaryTerm(src) {
+    delete glossary[src];
+    renderGlossaryTags();
+  }
+
+  function renderGlossaryTags() {
+    const container = document.getElementById('glossaryTags');
+    container.innerHTML = '';
+    for (const [src, tgt] of Object.entries(glossary)) {
+      const tag = document.createElement('div');
+      tag.className = 'glossary-tag';
+      tag.innerHTML = `<span>${escHtml(src)} → ${escHtml(tgt)}</span>`
+                    + `<button class="rm-btn" onclick="removeGlossaryTerm(${JSON.stringify(src)})">✕</button>`;
+      container.appendChild(tag);
+    }
+    const count = Object.keys(glossary).length;
+    document.getElementById('glossaryCount').textContent = count > 0 ? `(${count})` : '';
+  }
+
+  // 초기 렌더링 + Enter 키로 용어 추가
+  document.addEventListener('DOMContentLoaded', () => {
+    renderGlossaryTags();
+    document.getElementById('gTgt').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addGlossaryTerm();
+    });
+  });
 
   /* ══════════════════════════════════════════
      영상 자막

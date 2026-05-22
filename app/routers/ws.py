@@ -47,6 +47,7 @@ async def subtitle_ws(websocket: WebSocket):
     config   = json.loads(await websocket.receive_text())
     src_lang = config.get("src_lang", "ko")
     tgt_lang = config.get("tgt_lang", "en")
+    glossary = config.get("glossary") or None  # {"원문": "번역"} | None
 
     text_buffer:  str         = ""
     buffer_start: float | None = None
@@ -55,7 +56,7 @@ async def subtitle_ws(websocket: WebSocket):
         text = text.strip()
         if len(text) < MIN_TRANSLATE_CHARS:
             return False
-        result = await translation_service.translate(text, src_lang, tgt_lang)
+        result = await translation_service.translate(text, src_lang, tgt_lang, glossary)
         if result.lower().startswith("please provide") or result.lower().startswith("i need the"):
             return False
         msg = {"type": "translation", "text": result}
