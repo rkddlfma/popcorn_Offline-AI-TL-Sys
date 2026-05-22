@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실시간 자막</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+    }
+
+    .status-bar {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #374151;
+    }
+    .dot.connected { background: #34d399; }
+    .dot.waiting   { background: #f59e0b; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .subtitle-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .original {
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      color: #9ca3af;
+      min-height: 1.6em;
+      text-shadow: 0 1px 4px #000;
+    }
+
+    .translated {
+      font-size: clamp(1.4rem, 5vw, 2.8rem);
+      font-weight: 700;
+      color: #fff;
+      min-height: 1.4em;
+      text-shadow: 0 2px 8px #000;
+      line-height: 1.3;
+    }
+
+    .translated.new {
+      animation: appear 0.3s ease;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="status-bar">
+  <div class="dot waiting" id="dot"></div>
+  <span id="statusText">연결 중...</span>
+</div>
+
+<div class="subtitle-area">
+  <div class="original"  id="original"></div>
+  <div class="translated" id="translated"></div>
+</div>
+
+<script>
+  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl   = `${wsProto}//${location.host}/ws/viewer`;
+
+  function connect() {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      document.getElementById('dot').className = 'dot connected';
+      document.getElementById('statusText').textContent = '연결됨';
+    };
+
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'stt') {
+        document.getElementById('original').textContent = data.text;
+      } else if (data.type === 'translation') {
+        const el = document.getElementById('translated');
+        el.textContent = data.text;
+        el.classList.remove('new');
+        void el.offsetWidth; // reflow로 애니메이션 재실행
+        el.classList.add('new');
+      }
+    };
+
+    ws.onclose = () => {
+      document.getElementById('dot').className = 'dot waiting';
+      document.getElementById('statusText').textContent = '재연결 중...';
+      setTimeout(connect, 2000);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  connect();
+</script>
+</body>
+</html>

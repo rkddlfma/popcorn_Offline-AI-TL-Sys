@@ -61,3 +61,8 @@ async def health():
 @app.get("/")
 async def index():
     return FileResponse("static/index.html")
+
+
+@app.get("/view")
+async def viewer():
+    return FileResponse("static/view.html")
