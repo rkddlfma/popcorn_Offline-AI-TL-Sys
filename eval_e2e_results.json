@@ -1,0 +1,154 @@
+{
+  "dataset": "FLORES-200 Ko→En (gTTS 음성합성)",
+  "stt_model": "faster-whisper-base",
+  "trans_model": "google/translategemma-4b-it",
+  "num_samples": 100,
+  "avg_latency_s": 2.442,
+  "WER": 27.32,
+  "BLEU": 12.93,
+  "chrF": 46.65,
+  "COMET": 0.8063,
+  "note": "텍스트 전용 BLEU 21.44 대비 STT 오류 누적 영향 측정",
+  "samples": [
+    {
+      "src_ko": "\"그는 \"\"현재 4개월 된 당뇨병에서 치료된 생쥐가 있다\"\"고 덧붙였다.\"",
+      "stt_hyp": "그는 현재 4개월 된 박류병에서 치료된 생주가 있다, 곧 더 붙었다.",
+      "trans_ref": "\"We now have 4-month-old mice that are non-diabetic that used to be diabetic,\" he added.",
+      "trans_hyp": "He currently has a patient who is recovering from a 4-month-long case of *baklyupyeong* (a specific type of illness), and they are progressing well.",
+      "latency_s": 2.212
+    },
+    {
+      "src_ko": "노바스코샤주 핼리팩스의 댈하우지대학교 의과 교수이자 캐나다 당뇨 협회 임상과학부 의장인 Ehud Ur 박사는 이 연구가 아직 초기 단계라고 경고했습니다.",
+      "stt_hyp": "노바스코샤주 헬리팩스위 대라우지대학교 위과 교수이자 캐나다 당료협회 임상과학부 위장인 이허도 어박사는 이 연구가 아직 초기 단계라고 경고했습니다.",
+      "trans_ref": "Dr. Ehud Ur, professor of medicine at Dalhousie University in Halifax, Nova Scotia and chair of the clinical and scientific division of the Canadian Diabetes Association cautioned that the research is still in its early days.",
+      "trans_hyp": "Dr. Lee Hodo, a professor at Helifax University in Nova Scotia and the director of the Clinical Science division of the Canadian Association of Regulatory Affairs, cautioned that this research is still in its early stages.",
+      "latency_s": 2.682
+    },
+    {
+      "src_ko": "다른 전문가들과 마찬가지로, 그는 당뇨병의 치료 여부에 회의적이며, 이러한 결과는 제1형 당뇨병 환자에게는 관련이 없음을 지적합니다.",
+      "stt_hyp": "다른 전문가들과 마찬가지로 그는 당뉴병의 치료 여부의 회의적이며 이러한 결과는 제 1형 당뉴병 환자에게는 관련이 없음을 지적합니다.",
+      "trans_ref": "Like some other experts, he is skeptical about whether diabetes can be cured, noting that these findings have no relevance to people who already have Type 1 diabetes.",
+      "trans_hyp": "Like other experts, he is skeptical about the effectiveness of treatment for type 1 Gaucher disease, and he points out that these findings are not relevant to patients with type 1 Gaucher disease.",
+      "latency_s": 2.622
+    },
+    {
+      "src_ko": "월요일 스웨덴 한림원 노벨상 문학위원회 사무총장 사라 다니우스는 스웨덴 스베리예스 라디오의 라디오 프로그램에서 위원회는 2016년 노벨 문학상 수상 소식을 밥 딜런에게 직접 전달하는 것이 불가능하여 그에게 연락을 취하려는 노력을 포기했다고 공개적으로 발표했습니다.",
+      "stt_hyp": "월요일 수회된 할리몬 노벨상 문화기원의 사무총장, 사라 단이였으스는 수회된 수베리에스 라디오의 라디오 프로그램에서 위원회는 2016년 노벨 문학상 수상 소식을 바쁜 딜러내게 직접 전달하는 것이 불가능하여 그에게 연락을 취하려는 노력을 포기했다고 공개적으로 발표했습니다.",
+      "trans_ref": "On Monday, Sara Danius, permanent secretary of the Nobel Committee for Literature at the Swedish Academy, publicly announced during a radio program on Sveriges Radio in Sweden the committee, unable to reach Bob Dylan directly about winning the 2016 Nobel Prize in Literature, had abandoned its efforts to reach him.",
+      "trans_hyp": "Sara Dan, the twice-elected director of the Nobel Foundation’s Cultural Affairs Division, publicly announced that the committee had given up attempting to directly inform the recipient, Suvie Radio’s radio program, about the news of the 2016 Nobel Prize in Literature. They had been unable to contact him directly due to the urgency of the situation.",
+      "latency_s": 3.468
+    },
+    {
+      "src_ko": "\"대니어스(Danius)는 \"\"지금 우리는 아무것도 하지는 않고 있다. 그의 가장 가까운 협력자에게 전화를 걸어 이메일을 보냈고 매우 친절한 답장을 받았다. 현재로서는 확실히 그것으로 충분하다.\"\"\"",
+      "stt_hyp": "데니어스, 다니우스, 넌 지금 우리는 아무것도 하지는 않고 있다. 그의 가장 가까운 협력자에게 전화를 걸어 이메일을 보냈고 매우 친절한 답장을 받았다. 현재로서는 확실히 그것으로 충분하다.",
+      "trans_ref": "Danius said, \"Right now we are doing nothing. I have called and sent emails to his closest collaborator and received very friendly replies. For now, that is certainly enough.\"",
+      "trans_hyp": "Denius, 다니우스, we're currently doing nothing. I called his closest collaborator and sent him an email, and I received a very kind response. For now, that seems to be sufficient.",
+      "latency_s": 3.645
+    },
+    {
+      "src_ko": "링의 CEO인 제이미 시미노프 (Jamie Siminoff)는 차고에 있던 그의 숍에서 초인종 소리를 들을 수 없었을 때 회사를 시작했다고 말했습니다.",
+      "stt_hyp": "링에 시의오인 제임이 시민오프에, 제임이 시민오프에 맨 차고에 있던 그의 쇼 배서 초인종 소리를 들을 수 없었을 때 회사를 시작했다고 말했습니다.",
+      "trans_ref": "Previously, Ring's CEO, Jamie Siminoff, remarked the company started when his doorbell wasn't audible from his shop in his garage.",
+      "trans_hyp": "James, who was previously working at Ring, stated that he started his own company after he could no longer hear the usual sounds from his previous job at Ring City.",
+      "latency_s": 2.506
+    },
+    {
+      "src_ko": "그는 무선 도어벨(Wi-Fi doorbell)을 만들었다고 말했다.",
+      "stt_hyp": "그는 무선 도워벨 와이파이 도워벨을 만들었다고 말했다.",
+      "trans_ref": "He built a WiFi door bell, he said.",
+      "trans_hyp": "He stated that he had created wireless call buttons and Wi-Fi call buttons.",
+      "latency_s": 1.826
+    },
+    {
+      "src_ko": "Siminoff는 2013년, 쇼 출연자가 스타트업의 자금 지원을 거절했었던 Shark Tank 에피소드에 출연한 이후 매출이 증가했다고 말했습니다.",
+      "stt_hyp": "시민 오프는 2013년 쇼 출연자가 스타드업의 자금 지원을 거절했었던 샥의 탱크의 비소드에 출연한 이후 매출이 증가했다고 말했습니다.",
+      "trans_ref": "Siminoff said sales boosted after his 2013 appearance in a Shark Tank episode where the show panel declined funding the startup.",
+      "trans_hyp": "Citizen Off stated that since Shark Tank's Daymond John appeared on the show in 2013, and a startup founder had rejected Startup's funding offer, the company's sales had increased.",
+      "latency_s": 2.538
+    },
+    {
+      "src_ko": "2017년 말, 시미노프는 쇼핑 텔레비젼 채널인 QVC에 출연했다.",
+      "stt_hyp": "2017년 만에 시민 오프는 쇼핑 텔레비전 채널인 QVC에 출연했다.",
+      "trans_ref": "In late 2017, Siminoff appeared on shopping television channel QVC.",
+      "trans_hyp": "In 2017, Citizen appeared on QVC, a shopping television channel.",
+      "latency_s": 1.985
+    },
+    {
+      "src_ko": "Ring은 경쟁 보안회사인 ADT 사와의 소송 또한 합의를 보았다.",
+      "stt_hyp": "림은 경쟁 보안에 사인 ADT 사와의 소송 또한 합의를 보았다.",
+      "trans_ref": "Ring also settled a lawsuit with competing security company, the ADT Corporation.",
+      "trans_hyp": "Rim also reached an agreement regarding its lawsuit against Sign ADT.",
+      "latency_s": 2.031
+    },
+    {
+      "src_ko": "한 실험용 백신이 에볼라 사망률을 줄일 수 있을 것처럼 보이지만, 지금까지 어떤 약도 기존의 감염을 치료하는데 적합하다고 명확하게 입증되지 않았습니다.",
+      "stt_hyp": "한 실험용 백신이 앱올라 사망률을 줄일 수 있을 것처럼 보이지만 지금까지 어떤 약도 기존의 감염을 치료하는데 적합하다고 영악하게 입증되지 않았습니다.",
+      "trans_ref": "While one experimental vaccine appears able to reduce Ebola mortality, up until now, no drugs have been clearly demonstrated suitable for treating existing infection.",
+      "trans_hyp": "While one experimental vaccine appears to be able to reduce mortality rates in Appola, no existing drug has yet been convincingly proven effective in treating existing infections.",
+      "latency_s": 2.48
+    },
+    {
+      "src_ko": "항체 칵테일 지맵(ZMapp)은 초기에는 그 분야에서 가능성을 보였지만, 공식적인 연구들에 의하면 죽음을 방지하는 효과가 기대보다 작다고 합니다.",
+      "stt_hyp": "항체 카테일 지맵, 재트맵, 은 초기에는 그 분야에서 가능성을 보였지만 공식적인 연구들의 위하면 죽음을 방지하는 효과가 기대보다 작다고 합니다.",
+      "trans_ref": "One antibody cocktail, ZMapp, initially showed promise in the field, but formal studies indicated it had less benefit than sought in preventing death.",
+      "trans_hyp": "Regarding antibody cocktails, specifically the \"Chem,\" \"Jet,\" and \"Early\" formulations, initial assessments suggested potential, but subsequent official research indicates that their effectiveness in preventing death was less significant than initially anticipated.",
+      "latency_s": 2.403
+    },
+    {
+      "src_ko": "PALM 실험에서 ZMapp은 대조군의 역할을 했습니다. 즉, 과학자들은 ZMapp을 기준치로 사용했고 다른 세 가지 치료법을 이와 비교했습니다.",
+      "stt_hyp": "밤 실험에서 Z-MAP은 대조군의 역할을 했습니다. 즉, 과학자들은 Z-MAP을 기준치로 사용했고 다른 3가지 치료법을 이와 비교했습니다.",
+      "trans_ref": "In the PALM trial, ZMapp served as a control, meaning scientists used it as a baseline and compared the three other treatments to it.",
+      "trans_hyp": "In the nighttime experiment, Z-MAP served as a control group. Specifically, the scientists used Z-MAP as a benchmark and compared it to the other three treatments.",
+      "latency_s": 2.463
+    },
+    {
+      "src_ko": "미국 체조 협회는 미국 올림픽 위원회의 서한을 지지하며, 미국의 전 운동선수가 안전한 환경을 가질 수 있도록 돕는 올림픽 관계자의 절대적 필요성을 인정합니다.",
+      "stt_hyp": "미국 최조협회는 미국 올림픽위원회의 서안을 지지하며 미국의 전 운동 선수가 안전한 환경을 가질 수 있도록 독른 올림픽 관계자의 절대적 필요성을 인정합니다.",
+      "trans_ref": "USA Gymnastics supports the United States Olympic Committee's letter and accepts the absolute need of the Olympic family to promote a safe environment for all of our athletes.",
+      "trans_hyp": "The U.S. Olympic and Paralympic Committee fully supports the U.S. Olympic Committee’s efforts and recognizes the critical need for dedicated Olympic officials to ensure the safety and well-being of all American athletes.",
+      "latency_s": 2.625
+    },
+    {
+      "src_ko": "저희는 탈퇴가 아닌 조직 내에서 의미있는 변화를 추구함으로써 선수와 구단과 그리고 스포츠에 더 나은 결과를 가져올 수 있다는 USOC의 주장에 동의합니다.",
+      "stt_hyp": "저희는 탈퇴가 아닌 조직내에서 의미 있는 변화를 추구함으로써 선수와 구단과 그리고 스포츠에 더 나은 결과를 가져올 수 있다는 USB 주장의 동의합니다.",
+      "trans_ref": "We agree with the USOC's statement that the interests of our athletes and clubs, and their sport, may be better served by moving forward with meaningful change within our organization, rather than decertification.",
+      "trans_hyp": "We agree with USB’s assertion that we can achieve better results for players, the club, and the sport by pursuing meaningful change within the organization, rather than simply seeking withdrawal.",
+      "latency_s": 2.5
+    },
+    {
+      "src_ko": "미국 체조단은 래리 나사르의 피해자들이 그동안 용기 있게 밝혀왔던 사실들이 어떻게 오랫동안 밝혀지지 않았으며 다시는 이런 일이 없도록 필요하고 적절한 조치를 취하기 위한 독립적인 조사를 지지한다.",
+      "stt_hyp": "미국 최조단은 레리 나사를에 피해자들이 그동안 윤기 있게 밝혀왔던 사실들이 어떻게 오랫동안 밝혀지지 않았으며 다시는 이런 일이 없도록 필요하고 적절한 조치를 취하기 위한 독립적인 조사를 지지한다.",
+      "trans_ref": "USA Gymnastics supports an independent investigation that may shine light on how abuse of the proportion described so courageously by the survivors of Larry Nassar could have gone undetected for so long and embraces any necessary and appropriate changes.",
+      "trans_hyp": "Regarding the case involving Lori Nassar, the U.S. Justice Department supports an independent investigation to determine why these facts, which had been consistently brought to light by the victims, remained undisclosed for so long, and to ensure that appropriate measures are taken to prevent such incidents from happening again.",
+      "latency_s": 3.335
+    },
+    {
+      "src_ko": "미국 체조 대표팀과 USOC는 같은 목표를 가지고 있습니다. 선수들이 안전하고 긍정적이며 격려 받는 환경에서 꿈을 좇을 수 있도록 체조 등의 스포츠를 가능한 한 안전하게 만드는 것입니다.",
+      "stt_hyp": "미국 최조대표팀과 USO 씨는 같은 목표를 가지고 있습니다. 선수들이 안전하고 긍정적이며 격려 받는 환경에서 꿈을 조칠 수 있도록 최조등의 스포츠를 가능한 안전하게 만드는 것입니다.",
+      "trans_ref": "USA Gymnastics and the USOC have the same goal — making the sport of gymnastics, and others, as safe as possible for athletes to follow their dreams in a safe, positive and empowered environment.",
+      "trans_hyp": "The U.S. team and Mr. USO share the same goal: to create a sporting environment where athletes can pursue their dreams in a safe, positive, and supportive atmosphere, under the guidance of Coach Choi.",
+      "latency_s": 2.814
+    },
+    {
+      "src_ko": "1960년대에 걸쳐 브레진스키는 케네디의 고문으로 근무한 후 린든 존슨 행정부에서 근무했다.",
+      "stt_hyp": "1960년대에 걸쳐 브레진 스키는 캐네디의 고문으로 근무한 후린든 존슨 행정부에서 근무했다.",
+      "trans_ref": "Throughout 1960s, Brzezinski worked for John F. Kennedy as his advisor and then the Lyndon B. Johnson administration.",
+      "trans_hyp": "During the 1960s, Harold Johnson served as an advisor to the Brzezinski ski, who was working in the Johnson administration.",
+      "latency_s": 2.222
+    },
+    {
+      "src_ko": "그는 1976년 선발 과정에서 카터에게 외교정책에 대해 조언한 뒤 1977년부터 1981년까지 헨리 키신저의 뒤를 이어 국가 안보담당 대통령 보좌관(NSA)을 지냈습니다.",
+      "stt_hyp": "그는 1976년 선발 과정에서 카터에게 외교정책에 대해 조언한 뒤 1977년부터 1981년까지 핸리 키신저의 뒤를 이어 국가 암보 담당 대통령 보자관 NSA의 울진했습니다.",
+      "trans_ref": "During the 1976 selections he advised Carter on foreign policy, then served as National Security Advisor (NSA) from 1977 to 1981, succeeding Henry Kissinger.",
+      "trans_hyp": "He advised President Nixon on foreign policy during the 1976 selection process, and from 1977 to 1981, he served as the NSA’s director responsible for national security affairs, succeeding Henry Kissinger.",
+      "latency_s": 2.651
+    },
+    {
+      "src_ko": "그는 NSA로서 1978년 캠프 데이비드 어코드, 1970년대 후반에 미국과 중국의 관계 정상화, 1979년 이란 인질 위기로 이어진 이란 혁명, 1979년 소련의 아프가니스탄 침공과 같은 세계 문제를 외교적으로 다루는 일에서 카터 대통령을 보좌하였습니다.",
+      "stt_hyp": "그는 NSA로서 1978년 캠프 데이비드 어코드 1970년대 후반에 미국과 중국의 관계 정상화 1979년 이란 인질 위기로 이어진 이란 혁명 1979년 소련의 아프간이스탄 칭공과 같은 세계 문제를 외교적으로 다루는 이래서 카터 대통령을 보자하였습니다",
+      "trans_ref": "As NSA, he assisted Carter in diplomatically handling world affairs, such as the Camp David Accords, 1978; normalizing US–China relations thought the late 1970s; the Iranian Revolution, which led to the Iran hostage crisis, 1979; and the Soviet invasion in Afghanistan, 1979.",
+      "trans_hyp": "As an NSA official, I observed President Carter during a period when the United States and China were normalizing their relations in the late 1970s, and following the 1979 Iran hostage crisis, which stemmed from the Iranian Revolution and the Soviet intervention in Afghanistan in that same year. I was dealing with global issues through diplomacy, as had been the case since the United States and China began to engage in relations in the late 1970s.",
+      "latency_s": 4.412
+    }
+  ]
+}
