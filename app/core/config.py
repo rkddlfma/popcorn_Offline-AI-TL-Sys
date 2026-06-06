@@ -12,12 +12,6 @@ class Settings(BaseSettings):
     # VLLM
     vllm_url: str = "http://localhost:8001"
 
-    # VAD
-    vad_threshold: float = 0.02
-    silence_duration: float = 0.7
-    max_buffer_chars: int = 150
-    max_buffer_sec: float = 6.0
-
     class Config:
         env_file = ".env"
 

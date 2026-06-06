@@ -6,6 +6,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 router = APIRouter(tags=["websocket"])
 
 MIN_TRANSLATE_CHARS = 6
+PARTIAL_FLUSH_CHARS = 6  # 부분 번역을 전송하는 누적 글자 증가 임계값 (스로틀)
 
 # 연결된 학생 뷰어 목록
 _viewers: set[WebSocket] = set()
@@ -34,41 +35,66 @@ async def subtitle_ws(websocket: WebSocket):
     tgt_lang = config.get("tgt_lang", "en")
     glossary = config.get("glossary") or None  # {"원문": "번역"} | None
 
+    def _is_hallucination(text: str) -> bool:
+        low = text.lower()
+        return low.startswith("please provide") or low.startswith("i need the")
+
+    async def _send(msg: dict) -> None:
+        await websocket.send_text(json.dumps(msg))
+        await _broadcast(msg)
+
     async def translate_and_send(text: str) -> bool:
         text = text.strip()
         if len(text) < MIN_TRANSLATE_CHARS:
             return False
-        result = await translation_service.translate(text, src_lang, tgt_lang, glossary)
-        if result.lower().startswith("please provide") or result.lower().startswith("i need the"):
+
+        acc = ""
+        decided = False        # 헛소리 prefix 판정 완료 여부
+        last_sent_len = 0      # 마지막으로 전송한 누적 길이 (스로틀용)
+        # 토큰 스트리밍: 부분 번역을 즉시 흘려보내 체감 지연을 줄임
+        async for acc in translation_service.translate_stream(
+            text, src_lang, tgt_lang, glossary, priority="high"
+        ):
+            if not decided:
+                if _is_hallucination(acc):
+                    return False
+                if len(acc) < MIN_TRANSLATE_CHARS:
+                    continue   # 판정 보류 — 아직 전송하지 않음
+                decided = True
+            if len(acc) - last_sent_len >= PARTIAL_FLUSH_CHARS:
+                last_sent_len = len(acc)
+                await _send({"type": "translation", "text": acc, "done": False})
+
+        acc = acc.strip()
+        if not acc or _is_hallucination(acc):
             return False
-        msg = {"type": "translation", "text": result}
-        await websocket.send_text(json.dumps(msg))
-        await _broadcast(msg)
+        await _send({"type": "translation", "text": acc, "done": True})
         return True
 
     try:
         while True:
-            data  = await websocket.receive_bytes()
-            audio = np.frombuffer(data, dtype=np.float32)
+            try:
+                data  = await websocket.receive_bytes()
+                audio = np.frombuffer(data, dtype=np.float32)
 
-            stt_text = await stt_service.transcribe(audio, src_lang)
-            if not stt_text.strip():
-                continue
+                stt_text = await stt_service.transcribe(audio, src_lang)
+                if not stt_text.strip():
+                    continue
 
-            stt_msg = {"type": "stt", "text": stt_text}
-            await websocket.send_text(json.dumps(stt_msg))
-            await _broadcast(stt_msg)
+                await _send({"type": "stt", "text": stt_text})
 
-            # STT 청크마다 바로 번역
-            await translate_and_send(stt_text)
-
+                # STT 청크마다 바로 번역 (스트리밍)
+                await translate_and_send(stt_text)
+            except WebSocketDisconnect:
+                raise
+            except Exception as e:
+                # 개별 청크 처리 오류는 세션을 끊지 않고 해당 청크만 건너뜀
+                try:
+                    await websocket.send_text(json.dumps({"type": "error", "text": str(e)}))
+                except Exception:
+                    break
     except WebSocketDisconnect:
         pass
-    except Exception as e:
-        try:
-            await websocket.send_text(json.dumps({"type": "error", "text": str(e)}))
-        except Exception:
-            pass
 
 
 @router.websocket("/ws/viewer")

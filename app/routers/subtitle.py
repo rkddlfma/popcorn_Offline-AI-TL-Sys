@@ -11,6 +11,8 @@ router = APIRouter(prefix="/subtitle", tags=["subtitle"])
 UPLOAD_DIR = Path("uploads")
 
 ALLOWED_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v", ".flv"}
+MAX_UPLOAD_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
+READ_CHUNK_SIZE = 1024 * 1024  # 1MB 단위로 스트리밍 저장
 
 
 @router.post("/upload")
@@ -29,8 +31,20 @@ async def upload_video(
     job_id = str(uuid.uuid4())[:8]
     video_path = UPLOAD_DIR / f"{job_id}{suffix}"
 
+    # 청크 단위로 스트리밍 저장 (전체 파일을 메모리에 올리지 않음 + 크기 제한)
+    size = 0
+    too_large = False
     async with aiofiles.open(video_path, "wb") as f:
-        await f.write(await file.read())
+        while chunk := await file.read(READ_CHUNK_SIZE):
+            size += len(chunk)
+            if size > MAX_UPLOAD_SIZE:
+                too_large = True
+                break
+            await f.write(chunk)
+
+    if too_large:
+        video_path.unlink(missing_ok=True)
+        raise HTTPException(413, "파일이 너무 큽니다 (최대 2GB)")
 
     background_tasks.add_task(
         process_video,

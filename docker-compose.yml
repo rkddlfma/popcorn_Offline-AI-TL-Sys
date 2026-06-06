@@ -11,6 +11,14 @@ services:
       # 업로드/자막 파일 유지
       - ./uploads:/app/uploads
       - ./subtitles:/app/subtitles
+    # GPU 패스스루 (nvidia-container-toolkit 필요)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     restart: unless-stopped
 
 volumes:

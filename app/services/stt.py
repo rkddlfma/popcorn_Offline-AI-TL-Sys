@@ -26,10 +26,11 @@ class STTService:
         )
 
     def _transcribe_sync(self, audio: np.ndarray, language: str) -> str:
-        segments, _ = self._model.transcribe(audio, language=language, beam_size=5, vad_filter=True)
+        # 실시간 경로: greedy(beam_size=1)로 지연 최소화
+        segments, _ = self._model.transcribe(audio, language=language, beam_size=1, vad_filter=True)
         return " ".join(seg.text.strip() for seg in segments)
 
     def transcribe_segments(self, audio_path: str, language: str) -> list[dict]:
-        """타임스탬프 포함 세그먼트 반환 (배치 자막용)."""
+        """타임스탬프 포함 세그먼트 반환 (배치 자막용 — 정확도 우선 beam_size=5)."""
         segments, _ = self._model.transcribe(audio_path, language=language, beam_size=5, vad_filter=True)
         return [{"start": seg.start, "end": seg.end, "text": seg.text.strip()} for seg in segments]

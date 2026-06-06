@@ -116,6 +116,7 @@
 
   let currentItem = null;
   let pendingSrc  = '';
+  let streaming   = false;
 
   function addSubtitle(src, tgt) {
     const list = document.getElementById('subtitleList');
@@ -138,6 +139,12 @@
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 
+  function updateCurrent(tgt) {
+    if (!currentItem) { addSubtitle(pendingSrc, tgt); return; }
+    currentItem.querySelector('.translated').textContent = tgt;
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
@@ -156,9 +163,18 @@
         pendingSrc = data.text;
         document.getElementById('sttPreview').textContent = data.text;
       } else if (data.type === 'translation') {
-        document.getElementById('sttPreview').textContent = '';
-        addSubtitle(pendingSrc, data.text);
-        pendingSrc = '';
+        if (!streaming) {
+          // 새 번역 시작 — 새 자막 항목 생성
+          document.getElementById('sttPreview').textContent = '';
+          addSubtitle(pendingSrc, data.text);
+          streaming = true;
+        } else {
+          updateCurrent(data.text);   // 부분 번역 — 현재 항목 갱신
+        }
+        if (data.done) {
+          streaming = false;
+          pendingSrc = '';
+        }
       }
     };
 

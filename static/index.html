@@ -393,6 +393,8 @@
   let ws, audioCtx, processor, stream, running = false, sending = false;
   let speaking = false, silenceCount = 0, audioChunks = [], lastSendTime = 0;
   let prerollBuffer = [];
+  // 스트리밍 번역 상태
+  let streaming = false, pendingSrc = '', curSrc = '', lastSrc = '', lastTgt = '';
 
   function toggle() { running ? stop() : start(); }
 
@@ -418,12 +420,21 @@
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
       if (data.type === 'stt') {
+        pendingSrc = data.text;
         document.getElementById('currentSrc').textContent = data.text;
       } else if (data.type === 'translation') {
-        const prevSrc = document.getElementById('currentSrc').textContent;
-        const prevTgt = document.getElementById('currentTgt').textContent;
-        if (prevTgt && prevTgt !== '—') addHistory(prevSrc, prevTgt);
+        if (!streaming) {
+          // 새 번역 시작 — 직전 완료 자막을 히스토리로 이동
+          if (lastTgt) addHistory(lastSrc, lastTgt);
+          curSrc = pendingSrc;
+          streaming = true;
+        }
         document.getElementById('currentTgt').textContent = data.text;
+        if (data.done) {            // 번역 완료 — 다음 발화를 위해 확정
+          lastSrc = curSrc;
+          lastTgt = data.text;
+          streaming = false;
+        }
       } else if (data.type === 'error') {
         showError(data.text);
       }
@@ -441,6 +452,7 @@
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     ws = null;
     speaking = false; silenceCount = 0; audioChunks = []; prerollBuffer = [];
+    streaming = false; pendingSrc = ''; curSrc = '';
     setStatus('disconnected', '연결 안됨');
     document.getElementById('toggleBtn').textContent = '연결 시작';
     document.getElementById('toggleBtn').classList.remove('stop');

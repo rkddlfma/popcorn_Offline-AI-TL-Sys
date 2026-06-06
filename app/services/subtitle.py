@@ -4,6 +4,18 @@ from pathlib import Path
 
 JOBS: dict = {}  # job_id → {status, srt_path, error}
 SUBTITLES_DIR = Path("subtitles")
+MAX_JOBS = 50  # 보관할 최대 작업 수 (초과 시 완료/오류 작업부터 정리)
+
+
+def _prune_jobs() -> None:
+    """완료/오류 상태의 오래된 작업을 제거해 메모리 누수를 막습니다."""
+    if len(JOBS) <= MAX_JOBS:
+        return
+    removable = [jid for jid, j in JOBS.items() if j.get("status") in ("done", "error")]
+    for jid in removable[: len(JOBS) - MAX_JOBS]:
+        job = JOBS.pop(jid, None)
+        if job and job.get("srt_path"):
+            Path(job["srt_path"]).unlink(missing_ok=True)
 
 
 async def process_video(
@@ -37,13 +49,15 @@ async def process_video(
 
         JOBS[job_id]["status"] = "translating"
         srt_entries = []
-        for i, seg in enumerate(segments, 1):
+        idx = 1  # 자막 번호는 빈 세그먼트 스킵과 무관하게 1부터 연속
+        for seg in segments:
             if not seg["text"]:
                 continue
             translated = await translation_service.translate(seg["text"], src_lang, tgt_lang)
             srt_entries.append(
-                f"{i}\n{_fmt(seg['start'])} --> {_fmt(seg['end'])}\n{translated}\n"
+                f"{idx}\n{_fmt(seg['start'])} --> {_fmt(seg['end'])}\n{translated}\n"
             )
+            idx += 1
 
         SUBTITLES_DIR.mkdir(exist_ok=True)
         srt_path = SUBTITLES_DIR / f"{job_id}.srt"
@@ -57,6 +71,7 @@ async def process_video(
         video_path.unlink(missing_ok=True)
         if audio_path.exists():
             audio_path.unlink()
+        _prune_jobs()
 
 
 def _fmt(seconds: float) -> str:

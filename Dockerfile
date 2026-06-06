@@ -1,8 +1,15 @@
-FROM python:3.12-slim
+# CUDA 런타임 베이스 — bitsandbytes 4-bit / GPU 추론에 필요
+# (RTX 50xx 블랙웰은 CUDA 12.8+ / torch 2.7+ 가 필요할 수 있음 — 그 경우 베이스 태그와
+#  requirements 의 torch 버전을 함께 올릴 것)
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
-# ffmpeg 설치
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1
+
+# Python + ffmpeg 설치
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
+    python3 python3-pip ffmpeg \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
