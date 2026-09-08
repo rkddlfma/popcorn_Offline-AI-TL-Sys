@@ -5,6 +5,7 @@ from pathlib import Path
 JOBS: dict = {}  # job_id → {status, srt_path, error}
 SUBTITLES_DIR = Path("subtitles")
 MAX_JOBS = 50  # 보관할 최대 작업 수 (초과 시 완료/오류 작업부터 정리)
+MAX_CONCURRENT_TRANSLATIONS = 8  # 배치 번역 동시 요청 상한
 
 
 def _prune_jobs() -> None:
@@ -48,16 +49,25 @@ async def process_video(
         )
 
         JOBS[job_id]["status"] = "translating"
-        srt_entries = []
-        idx = 1  # 자막 번호는 빈 세그먼트 스킵과 무관하게 1부터 연속
-        for seg in segments:
-            if not seg["text"]:
-                continue
-            translated = await translation_service.translate(seg["text"], src_lang, tgt_lang)
-            srt_entries.append(
-                f"{idx}\n{_fmt(seg['start'])} --> {_fmt(seg['end'])}\n{translated}\n"
-            )
-            idx += 1
+        valid_segments = [seg for seg in segments if seg["text"]]
+
+        # 병렬 번역 — vLLM 백엔드는 continuous batching으로 동시 처리,
+        # transformers 백엔드는 GPU 락이 직렬화하므로 동작은 동일하되 손해 없음.
+        # 동시 요청 수를 제한해 vLLM 서버 과부하를 방지.
+        sem = asyncio.Semaphore(MAX_CONCURRENT_TRANSLATIONS)
+
+        async def _translate_one(seg: dict) -> str:
+            async with sem:
+                return await translation_service.translate(seg["text"], src_lang, tgt_lang)
+
+        translations = await asyncio.gather(
+            *(_translate_one(seg) for seg in valid_segments)
+        )
+
+        srt_entries = [
+            f"{idx}\n{_fmt(seg['start'])} --> {_fmt(seg['end'])}\n{translated}\n"
+            for idx, (seg, translated) in enumerate(zip(valid_segments, translations), 1)
+        ]
 
         SUBTITLES_DIR.mkdir(exist_ok=True)
         srt_path = SUBTITLES_DIR / f"{job_id}.srt"

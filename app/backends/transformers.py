@@ -135,22 +135,11 @@ class TransformersBackend(TranslationBackend):
         ).to(self._model.device, dtype=torch.bfloat16)
 
     def _translate_sync(self, text: str, src_lang: str, tgt_lang: str) -> str:
+        # 비스트리밍 경로 — 스트리머/스레드 없이 직접 생성 후 새 토큰만 디코딩
         inputs = self._build_inputs(text, src_lang, tgt_lang)
-        streamer = TextIteratorStreamer(
-            self._processor, skip_special_tokens=True, skip_prompt=True
-        )
-        gen_kwargs = dict(
-            **inputs,
-            streamer=streamer,
-            do_sample=False,
-            max_new_tokens=256,
-        )
-        thread = threading.Thread(target=self._model.generate, kwargs=gen_kwargs)
-        thread.start()
-
-        result = ""
-        for token in streamer:
-            result += token
-        thread.join()
-
-        return result.strip()
+        with torch.inference_mode():
+            output_ids = self._model.generate(
+                **inputs, do_sample=False, max_new_tokens=256
+            )
+        new_tokens = output_ids[0][inputs["input_ids"].shape[1]:]
+        return self._processor.decode(new_tokens, skip_special_tokens=True).strip()

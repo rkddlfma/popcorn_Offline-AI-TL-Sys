@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import numpy as np
@@ -13,14 +14,17 @@ _viewers: set[WebSocket] = set()
 
 
 async def _broadcast(message: dict) -> None:
-    """연결된 모든 뷰어에게 메시지 전송."""
-    disconnected = set()
-    for viewer in _viewers:
-        try:
-            await viewer.send_text(json.dumps(message))
-        except Exception:
-            disconnected.add(viewer)
-    _viewers.difference_update(disconnected)
+    """연결된 모든 뷰어에게 병렬 전송 — 뷰어 수가 늘어도 전송 시간이 늘지 않음."""
+    if not _viewers:
+        return
+    payload = json.dumps(message)
+    viewers = list(_viewers)
+    results = await asyncio.gather(
+        *(v.send_text(payload) for v in viewers), return_exceptions=True
+    )
+    _viewers.difference_update(
+        v for v, r in zip(viewers, results) if isinstance(r, Exception)
+    )
 
 
 @router.websocket("/ws/subtitle")
