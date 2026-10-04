@@ -52,6 +52,7 @@ async def room_professor(uri, room, chunks, chunk_seconds):
 
 async def viewer(uri, room, results, stop):
     async with websockets.connect(f"{uri}?room_id={room}", max_size=None, ping_interval=20) as ws:
+        results["connections_established"] += 1
         while not stop.is_set():
             try:
                 raw = await asyncio.wait_for(ws.recv(), timeout=1)
@@ -66,17 +67,22 @@ async def viewer(uri, room, results, stop):
             if msg.get("type") != "translation" or not msg.get("done"):
                 continue
             timing = msg.get("timing") or {}
+            room_results = results["by_room"][str(room)]
             # The load runner and API host are expected to share the local clock. This gives
             # a per-viewer transport-inclusive latency; server stage timings are also retained.
             if timing.get("audio_received_at") is not None:
-                results["e2e_ms"].append((time.time() - timing["audio_received_at"]) * 1000)
+                value = (time.time() - timing["audio_received_at"]) * 1000
+                results["e2e_ms"].append(value)
+                room_results["e2e_ms"].append(value)
             for name, start_key, end_key in (
                 ("audio_to_stt", "audio_received_at", "stt_completed_at"),
                 ("stt_to_queue", "stt_completed_at", "translation_queued_at"),
                 ("queue_to_delivery_server", "translation_queued_at", "student_delivery_started_at"),
             ):
                 if start_key in timing and end_key in timing:
-                    results[name].append((timing[end_key] - timing[start_key]) * 1000)
+                    value = (timing[end_key] - timing[start_key]) * 1000
+                    results[name].append(value)
+                    room_results[name].append(value)
 
 
 async def run_phase(args, room_count, room_chunks):
@@ -85,8 +91,12 @@ async def run_phase(args, room_count, room_chunks):
     viewer_uri = base.replace("http://", "ws://").replace("https://", "wss://") + "/ws/viewer"
     rooms = list(range(1, room_count + 1))
     stop = asyncio.Event()
-    results = {"e2e_ms": [], "audio_to_stt": [],
-               "stt_to_queue": [], "queue_to_delivery_server": []}
+    latency_names = ("e2e_ms", "audio_to_stt", "stt_to_queue", "queue_to_delivery_server")
+    results = {name: [] for name in latency_names}
+    results["connections_established"] = 0
+    results["by_room"] = {
+        str(room): {name: [] for name in latency_names} for room in rooms
+    }
     viewers = [asyncio.create_task(viewer(viewer_uri, room, results, stop))
                for room in rooms for _ in range(args.students_per_room)]
     await asyncio.sleep(args.warmup)
@@ -97,9 +107,14 @@ async def run_phase(args, room_count, room_chunks):
     await asyncio.sleep(args.drain)
     stop.set()
     await asyncio.gather(*viewers, return_exceptions=True)
-    return {"rooms": room_count, "viewer_connections_expected": room_count * args.students_per_room,
-            "latency": {name: summary(results[name]) for name in
-                        ("e2e_ms", "audio_to_stt", "stt_to_queue", "queue_to_delivery_server")}}
+    return {"rooms": room_count,
+            "viewer_connections_expected": room_count * args.students_per_room,
+            "viewer_connections_established": results["connections_established"],
+            "latency": {name: summary(results[name]) for name in latency_names},
+            "room_latency": {
+                room: {name: summary(values[name]) for name in latency_names}
+                for room, values in results["by_room"].items()
+            }}
 
 
 async def main():

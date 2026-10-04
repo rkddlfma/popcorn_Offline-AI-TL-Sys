@@ -42,6 +42,21 @@ python scripts/load_test.py --rooms 3 --room-audio 1=lecture-a.wav --room-audio 
 
 `--audio default.wav`와 `--room-audio 2=lecture-b.wav`를 함께 쓰면 Room 2에는 `lecture-b.wav`, 나머지에는 `default.wav`가 재생됩니다. `--audio` 없이 실행할 때는 측정에 포함되는 모든 room에 파일을 지정해야 합니다.
 
+### 다국어 Room 동시 부하
+
+`scripts/multilingual_load_test.py`는 동일한 WAV를 Room 1~3에 동시에 전송하며, Room별 목표 언어를 영어(`en`), 일본어(`ja`), 중국어(`zh`)로 설정합니다. 기본값은 Room당 100명(총 300명), WAV는 `wav/brian-neutral-and-measured.wav`, 원문 언어는 영어입니다.
+
+```bash
+.venv/bin/python scripts/multilingual_load_test.py \
+  --url http://localhost:8000 \
+  --audio wav/brian-neutral-and-measured.wav \
+  --src-lang en \
+  --students-per-room 100 \
+  --output multilingual-load-test-results.json
+```
+
+WAV 음성이 한국어라면 `--src-lang ko`로 바꾸세요. WAV는 mono, 16 kHz, signed 16-bit PCM이어야 합니다. 결과 JSON에는 연결된 뷰어 수와 전체/Room별 E2E 및 서버 단계별 지연 통계가 기록됩니다.
+
 기본 실행은 1 Room (50명), 3 Rooms (150명), 5 Rooms (250명) 시나리오를 차례로 수행합니다. 각 교수 소켓은 지정된 WAV를 청크 단위 실시간 속도로 한 번 재생합니다. 재생을 반복하거나 청크 크기를 바꾸려면 `--chunk-seconds`를 조정하고 더 긴 WAV를 사용하세요. 개별 시나리오는 `--rooms 5`로 고를 수 있습니다. 기본 drain은 30초이며 가장 긴 번역 대기보다 길게 설정하세요. JSON 리포트에는 각 학생이 받은 완료 번역에 대해 오디오 수신부터 화면 수신까지의 클라이언트 지연과 서버 단계별 지연의 평균/p50/p95/p99가 기록됩니다. 클라이언트와 서버 시계가 같은 호스트 시계가 아니면 e2e 값은 시계 오차를 포함하므로, 각 브라우저에서 수신시각 및 해당 측정 구간의 Prometheus 데이터를 함께 저장합니다.
 
 권장 절차:

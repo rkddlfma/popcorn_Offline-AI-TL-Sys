@@ -1,0 +1,176 @@
+# HELP python_gc_objects_collected_total Objects collected during gc
+# TYPE python_gc_objects_collected_total counter
+python_gc_objects_collected_total{generation="0"} 57752.0
+python_gc_objects_collected_total{generation="1"} 11264.0
+python_gc_objects_collected_total{generation="2"} 257.0
+# HELP python_gc_objects_uncollectable_total Uncollectable objects found during GC
+# TYPE python_gc_objects_uncollectable_total counter
+python_gc_objects_uncollectable_total{generation="0"} 0.0
+python_gc_objects_uncollectable_total{generation="1"} 0.0
+python_gc_objects_uncollectable_total{generation="2"} 0.0
+# HELP python_gc_collections_total Number of times this generation was collected
+# TYPE python_gc_collections_total counter
+python_gc_collections_total{generation="0"} 2138.0
+python_gc_collections_total{generation="1"} 194.0
+python_gc_collections_total{generation="2"} 9.0
+# HELP python_info Python platform information
+# TYPE python_info gauge
+python_info{implementation="CPython",major="3",minor="12",patchlevel="3",version="3.12.3"} 1.0
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+process_virtual_memory_bytes 6.1112393728e+10
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 2.525609984e+09
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+process_start_time_seconds 1.79108435502e+09
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 67.73
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 43.0
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+process_max_fds 1.048576e+06
+# HELP subtitle_viewer_connections Connected viewer sockets
+# TYPE subtitle_viewer_connections gauge
+subtitle_viewer_connections{room_id="1"} 1.0
+subtitle_viewer_connections{room_id="2"} 0.0
+subtitle_viewer_connections{room_id="3"} 0.0
+subtitle_viewer_connections{room_id="4"} 0.0
+subtitle_viewer_connections{room_id="5"} 0.0
+# HELP subtitle_audio_chunks_total Audio chunks received
+# TYPE subtitle_audio_chunks_total counter
+subtitle_audio_chunks_total{room_id="4"} 6.0
+subtitle_audio_chunks_total{room_id="1"} 6.0
+subtitle_audio_chunks_total{room_id="3"} 10.0
+subtitle_audio_chunks_total{room_id="2"} 5.0
+subtitle_audio_chunks_total{room_id="5"} 6.0
+# HELP subtitle_audio_chunks_created Audio chunks received
+# TYPE subtitle_audio_chunks_created gauge
+subtitle_audio_chunks_created{room_id="4"} 1.7910843721666481e+09
+subtitle_audio_chunks_created{room_id="1"} 1.7910843722043889e+09
+subtitle_audio_chunks_created{room_id="3"} 1.7910843722155406e+09
+subtitle_audio_chunks_created{room_id="2"} 1.7910843722159975e+09
+subtitle_audio_chunks_created{room_id="5"} 1.7910843722164273e+09
+# HELP subtitle_stage_latency_seconds Realtime pipeline stage duration
+# TYPE subtitle_stage_latency_seconds histogram
+subtitle_stage_latency_seconds_bucket{le="0.01",stage="audio_to_stt"} 1.0
+subtitle_stage_latency_seconds_bucket{le="0.025",stage="audio_to_stt"} 1.0
+subtitle_stage_latency_seconds_bucket{le="0.05",stage="audio_to_stt"} 1.0
+subtitle_stage_latency_seconds_bucket{le="0.1",stage="audio_to_stt"} 2.0
+subtitle_stage_latency_seconds_bucket{le="0.25",stage="audio_to_stt"} 23.0
+subtitle_stage_latency_seconds_bucket{le="0.5",stage="audio_to_stt"} 28.0
+subtitle_stage_latency_seconds_bucket{le="1.0",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_bucket{le="2.0",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_bucket{le="5.0",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_bucket{le="10.0",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_bucket{le="30.0",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_bucket{le="60.0",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_bucket{le="+Inf",stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_count{stage="audio_to_stt"} 33.0
+subtitle_stage_latency_seconds_sum{stage="audio_to_stt"} 8.884862696984783
+subtitle_stage_latency_seconds_bucket{le="0.01",stage="stt_to_translation_queue"} 26.0
+subtitle_stage_latency_seconds_bucket{le="0.025",stage="stt_to_translation_queue"} 27.0
+subtitle_stage_latency_seconds_bucket{le="0.05",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.1",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.25",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.5",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="1.0",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="2.0",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="5.0",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="10.0",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="30.0",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="60.0",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_bucket{le="+Inf",stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_count{stage="stt_to_translation_queue"} 28.0
+subtitle_stage_latency_seconds_sum{stage="stt_to_translation_queue"} 0.13895012001739815
+subtitle_stage_latency_seconds_bucket{le="0.01",stage="queue_to_translation_complete"} 0.0
+subtitle_stage_latency_seconds_bucket{le="0.025",stage="queue_to_translation_complete"} 0.0
+subtitle_stage_latency_seconds_bucket{le="0.05",stage="queue_to_translation_complete"} 0.0
+subtitle_stage_latency_seconds_bucket{le="0.1",stage="queue_to_translation_complete"} 0.0
+subtitle_stage_latency_seconds_bucket{le="0.25",stage="queue_to_translation_complete"} 0.0
+subtitle_stage_latency_seconds_bucket{le="0.5",stage="queue_to_translation_complete"} 0.0
+subtitle_stage_latency_seconds_bucket{le="1.0",stage="queue_to_translation_complete"} 3.0
+subtitle_stage_latency_seconds_bucket{le="2.0",stage="queue_to_translation_complete"} 5.0
+subtitle_stage_latency_seconds_bucket{le="5.0",stage="queue_to_translation_complete"} 23.0
+subtitle_stage_latency_seconds_bucket{le="10.0",stage="queue_to_translation_complete"} 28.0
+subtitle_stage_latency_seconds_bucket{le="30.0",stage="queue_to_translation_complete"} 28.0
+subtitle_stage_latency_seconds_bucket{le="60.0",stage="queue_to_translation_complete"} 28.0
+subtitle_stage_latency_seconds_bucket{le="+Inf",stage="queue_to_translation_complete"} 28.0
+subtitle_stage_latency_seconds_count{stage="queue_to_translation_complete"} 28.0
+subtitle_stage_latency_seconds_sum{stage="queue_to_translation_complete"} 104.3094541169703
+subtitle_stage_latency_seconds_bucket{le="0.01",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.025",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.05",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.1",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.25",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="0.5",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="1.0",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="2.0",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="5.0",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="10.0",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="30.0",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="60.0",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_bucket{le="+Inf",stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_count{stage="translation_to_student_send"} 28.0
+subtitle_stage_latency_seconds_sum{stage="translation_to_student_send"} 0.09208311687689275
+# HELP subtitle_stage_latency_seconds_created Realtime pipeline stage duration
+# TYPE subtitle_stage_latency_seconds_created gauge
+subtitle_stage_latency_seconds_created{stage="audio_to_stt"} 1.7910843728572009e+09
+subtitle_stage_latency_seconds_created{stage="stt_to_translation_queue"} 1.7910843728590925e+09
+subtitle_stage_latency_seconds_created{stage="queue_to_translation_complete"} 1.7910843744336517e+09
+subtitle_stage_latency_seconds_created{stage="translation_to_student_send"} 1.791084374438162e+09
+# HELP translation_gpu_lock_wait_seconds Time waiting to acquire translation GPU lock
+# TYPE translation_gpu_lock_wait_seconds histogram
+translation_gpu_lock_wait_seconds_bucket{le="0.01"} 4.0
+translation_gpu_lock_wait_seconds_bucket{le="0.025"} 4.0
+translation_gpu_lock_wait_seconds_bucket{le="0.05"} 4.0
+translation_gpu_lock_wait_seconds_bucket{le="0.1"} 4.0
+translation_gpu_lock_wait_seconds_bucket{le="0.25"} 4.0
+translation_gpu_lock_wait_seconds_bucket{le="0.5"} 4.0
+translation_gpu_lock_wait_seconds_bucket{le="1.0"} 5.0
+translation_gpu_lock_wait_seconds_bucket{le="2.0"} 6.0
+translation_gpu_lock_wait_seconds_bucket{le="5.0"} 28.0
+translation_gpu_lock_wait_seconds_bucket{le="10.0"} 28.0
+translation_gpu_lock_wait_seconds_bucket{le="30.0"} 28.0
+translation_gpu_lock_wait_seconds_bucket{le="60.0"} 28.0
+translation_gpu_lock_wait_seconds_bucket{le="+Inf"} 28.0
+translation_gpu_lock_wait_seconds_count 28.0
+translation_gpu_lock_wait_seconds_sum 77.70999999984633
+# HELP translation_gpu_lock_wait_seconds_created Time waiting to acquire translation GPU lock
+# TYPE translation_gpu_lock_wait_seconds_created gauge
+translation_gpu_lock_wait_seconds_created 1.7910843570844486e+09
+# HELP translation_inference_seconds Time from translation lock acquisition to stream completion
+# TYPE translation_inference_seconds histogram
+translation_inference_seconds_bucket{le="0.01"} 0.0
+translation_inference_seconds_bucket{le="0.025"} 0.0
+translation_inference_seconds_bucket{le="0.05"} 0.0
+translation_inference_seconds_bucket{le="0.1"} 0.0
+translation_inference_seconds_bucket{le="0.25"} 0.0
+translation_inference_seconds_bucket{le="0.5"} 2.0
+translation_inference_seconds_bucket{le="1.0"} 16.0
+translation_inference_seconds_bucket{le="2.0"} 28.0
+translation_inference_seconds_bucket{le="5.0"} 28.0
+translation_inference_seconds_bucket{le="10.0"} 28.0
+translation_inference_seconds_bucket{le="30.0"} 28.0
+translation_inference_seconds_bucket{le="60.0"} 28.0
+translation_inference_seconds_bucket{le="+Inf"} 28.0
+translation_inference_seconds_count 28.0
+translation_inference_seconds_sum 26.59699999995064
+# HELP translation_inference_seconds_created Time from translation lock acquisition to stream completion
+# TYPE translation_inference_seconds_created gauge
+translation_inference_seconds_created 1.7910843570844784e+09
+# HELP translation_active_requests Requests inside translation lock
+# TYPE translation_active_requests gauge
+translation_active_requests 0.0
+# HELP stt_active_requests STT requests currently executing
+# TYPE stt_active_requests gauge
+stt_active_requests 0.0
+# HELP gpu_stt_translation_overlap 1 when STT and translation execute concurrently
+# TYPE gpu_stt_translation_overlap gauge
+gpu_stt_translation_overlap 0.0
+# HELP subtitle_pipeline_errors_total Realtime pipeline errors
+# TYPE subtitle_pipeline_errors_total counter
