@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # 번역 모델
     translate_model: str = "google/translategemma-4b-it"
-    translate_backend: str = "transformers"  # "transformers" | "vllm"
+    translate_backend: str = "transformers"  # "transformers" | "transformers_legacy" | "vllm"
 
     # Whisper
     whisper_model: str = "base"

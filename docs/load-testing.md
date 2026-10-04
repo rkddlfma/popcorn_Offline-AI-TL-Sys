@@ -14,6 +14,11 @@
 | `stt_active_requests`, `translation_active_requests` | 동시에 진행 중인 각 작업 수 |
 | `gpu_stt_translation_overlap` | STT 작업과 번역 Lock 점유가 겹치는 동안 1 |
 | `subtitle_pipeline_errors_total{stage}` | STT 또는 WebSocket 청크 처리 오류 |
+| `subtitle_audio_ingress_queue_depth{room_id}` | Room별 STT 대기 오디오 청크 수 (최대 4, 가득 차면 WebSocket/TCP backpressure) |
+| `subtitle_audio_queue_wait_seconds{room_id}` | 오디오 청크가 STT 시작 전 대기한 시간 |
+| `subtitle_audio_queue_backpressure_events_total{room_id}` | bounded queue가 가득 차 수신이 대기한 횟수 |
+| `subtitle_stt_completed_chunks_total{room_id}` / `subtitle_translation_completed_chunks_total{room_id}` | STT 및 번역 완료 청크 수 |
+| `translation_batch_wait_seconds` / `translation_generation_seconds` | Transformers continuous batch scheduler 대기 및 생성 시간 |
 
 Histogram의 `_bucket`, `_sum`, `_count` 시계열로 평균과 p50/p95/p99를 계산합니다. Prometheus histogram은 서버 측 percentile을 직접 내지 않으므로 scrape 기간별 `histogram_quantile()`을 사용하세요. 예:
 
@@ -80,3 +85,9 @@ WAV 음성이 한국어라면 `--src-lang ko`로 바꾸세요. WAV는 mono, 16 k
 | 5 Rooms Lock 대기 증가율 | 1 Room 대비 p95 3배 초과 또는 절대 목표 초과 | GPU Lock 직렬화 비용이 유의함; Continuous Batching 실험 진행 |
 
 Lock 대기만 높고 추론 시간이 낮다면 큐잉을 줄이는 배치/서빙 스케줄링의 효과를 우선 검증합니다. 추론 시간이 높다면 batching으로 처리량이 좋아져도 첫 토큰/문장 지연이 커질 수 있으므로, 5 Room 동일 부하에서 p95/p99 E2E가 개선되고 1 Room 지연이 회귀하지 않을 때 도입합니다. 현재 구현은 Transformers backend Lock 구간을 계측합니다. VLLM backend는 외부 서버 큐/추론을 사용하므로 해당 두 histogram은 0건이며, VLLM 서버의 자체 Prometheus 지표를 같은 구간에 수집해야 비교가 공정합니다.
+
+## Continuous batching
+
+`.env`의 `TRANSLATE_BACKEND=transformers`가 기본 continuous batching 경로입니다. Transformers 5.18 이상과 Gemma 3 continuous batching 지원이 필요하며, batch당 최대 4개 요청, bounded scheduler queue 128개로 동작합니다. `translation_gpu_lock_wait_seconds`는 이 모드에서 사용하지 않으며, `translation_batch_wait_seconds`와 `translation_generation_seconds`를 봅니다. 초기화가 실패하면 API 시작도 실패하므로 GPU 메모리 여유를 확인하세요. 이전 단일 요청 GPU Lock 동작은 `TRANSLATE_BACKEND=transformers_legacy`로 선택할 수 있습니다.
+
+다국어 지속 부하는 `python scripts/multilingual_load_test.py --duration-seconds 120 --drain 90`처럼 실행합니다. 기본 2초 청크 간격으로 같은 WAV를 반복해 3개 Room에 보냅니다. 결과의 늦은 청크 수와 `/metrics`의 오디오 수신/STT/번역 완료 수, audio queue 지표를 함께 확인하세요. 짧은 WAV 반복은 처리량 soak test이며 자연스러운 연속 강의의 대체는 아닙니다.

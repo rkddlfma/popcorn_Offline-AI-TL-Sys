@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import torch
@@ -37,8 +38,12 @@ async def lifespan(app: FastAPI):
     app.state.translation_service = translation_service
 
     print("\n서버 준비 완료.\n")
-    yield
-    # 종료 시 정리 작업 (필요 시 추가)
+    try:
+        yield
+    finally:
+        close_backend = getattr(backend, "close", None)
+        if close_backend is not None:
+            await asyncio.to_thread(close_backend)
 
 
 app = FastAPI(

@@ -1,0 +1,2 @@
+# API evaluation and BLEU/chrF scoring dependencies.
+sacrebleu>=2.4.0

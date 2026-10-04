@@ -8,7 +8,7 @@ class TranslateRequest(BaseModel):
     text: str
     src_lang: str = "ko"
     tgt_lang: str = "en"
-    glossary: dict[str, str] | None = None
+    glossary: dict[str, str | dict[str, str]] | None = None
 
 
 class TranslateResponse(BaseModel):

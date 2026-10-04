@@ -1,9 +1,19 @@
 import asyncio
+import copy
 import threading
+import time
+import uuid
 from typing import AsyncIterator
 
 import torch
-from app.metrics import translation_enter, translation_exit, translation_inference, translation_queue_wait
+from app.metrics import (
+    translation_batch_wait,
+    translation_enter,
+    translation_exit,
+    translation_generation,
+    translation_inference,
+    translation_queue_wait,
+)
 from transformers import (
     AutoModelForImageTextToText,
     AutoProcessor,
@@ -26,11 +36,17 @@ except Exception:
 
 
 class TransformersBackend(TranslationBackend):
-    def __init__(self):
+    def __init__(self, continuous_batching: bool = True):
         self._processor = None
         self._model = None
+        self._continuous_batching = continuous_batching
+        self._continuous_manager = None
         self._gpu_lock = asyncio.Lock()  # GPU는 1개 — 번역 직렬화
         self._realtime_waiting = 0       # 대기 중인 실시간(high) 요청 수
+
+    @property
+    def continuous_batching_active(self) -> bool:
+        return self._continuous_manager is not None
 
     def load(self) -> None:
         print(f"[TransformersBackend] 모델 로드 중: {settings.translate_model}")
@@ -45,7 +61,37 @@ class TransformersBackend(TranslationBackend):
             device_map={"": 0},
         )
         self._model.eval()
+        if self._continuous_batching:
+            try:
+                from transformers import ContinuousBatchingConfig
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Continuous batching requires a newer Transformers release"
+                ) from exc
+            if not hasattr(self._model, "init_continuous_batching"):
+                raise RuntimeError(
+                    "Loaded Transformers model does not support continuous batching"
+                )
+            generation_config = copy.deepcopy(self._model.generation_config)
+            generation_config.do_sample = False
+            generation_config.max_new_tokens = 256
+            self._continuous_manager = self._model.init_continuous_batching(
+                generation_config=generation_config,
+                continuous_batching_config=ContinuousBatchingConfig(
+                    max_requests_per_batch=4,
+                    max_queue_size=128,
+                    max_memory_percent=0.5,
+                ),
+            )
+            self._continuous_manager.warmup()
+            self._continuous_manager.start()
         print("[TransformersBackend] 로드 완료")
+
+    def close(self) -> None:
+        if self._continuous_manager is not None:
+            self._continuous_manager.stop(block=True, timeout=30)
+            self._continuous_manager.destroy()
+            self._continuous_manager = None
 
     # ── 우선순위 게이트 ────────────────────────────────────────────────────
     async def _acquire_priority(self, priority: str) -> None:
@@ -64,6 +110,14 @@ class TransformersBackend(TranslationBackend):
     async def translate(
         self, text: str, src_lang: str, tgt_lang: str, priority: str = "normal"
     ) -> str:
+        if self._continuous_manager is not None:
+            result = ""
+            async for partial in self.translate_stream(
+                text, src_lang, tgt_lang, priority
+            ):
+                result = partial
+            return result
+
         await self._acquire_priority(priority)
         try:
             queued_at = asyncio.get_running_loop().time()
@@ -87,6 +141,13 @@ class TransformersBackend(TranslationBackend):
     ) -> AsyncIterator[str]:
         await self._acquire_priority(priority)
         try:
+            if self._continuous_manager is not None:
+                async for partial in self._translate_stream_continuous(
+                    text, src_lang, tgt_lang
+                ):
+                    yield partial
+                return
+
             queued_at = asyncio.get_running_loop().time()
             async with self._gpu_lock:
                 translation_queue_wait.observe(asyncio.get_running_loop().time() - queued_at)
@@ -127,6 +188,69 @@ class TransformersBackend(TranslationBackend):
                     translation_exit()
         finally:
             self._release_priority(priority)
+
+    async def _translate_stream_continuous(
+        self, text: str, src_lang: str, tgt_lang: str
+    ) -> AsyncIterator[str]:
+        """Submit a request to the shared Transformers continuous-batching manager."""
+        loop = asyncio.get_running_loop()
+        inputs = await loop.run_in_executor(
+            None, self._build_inputs, text, src_lang, tgt_lang
+        )
+        input_ids = inputs["input_ids"][0].tolist()
+        request_id = uuid.uuid4().hex
+        outputs: asyncio.Queue = asyncio.Queue()
+        manager = self._continuous_manager
+        submitted_at = time.perf_counter()
+        first_output = True
+        generation_started_at = None
+
+        def on_output(result) -> None:
+            outputs.put_nowait(result)
+
+        translation_enter()
+        completed = False
+        try:
+            manager.register_result_handler(request_id, on_output)
+            accepted = await loop.run_in_executor(
+                None,
+                lambda: manager.add_request(
+                    input_ids=input_ids,
+                    request_id=request_id,
+                    max_new_tokens=256,
+                    streaming=True,
+                ),
+            )
+            if accepted is None:
+                raise RuntimeError("Continuous batching scheduler rejected request")
+
+            while True:
+                result = await outputs.get()
+                if result.error:
+                    raise RuntimeError(result.error)
+                if first_output and result.lifespan[0] > 0:
+                    generation_started_at = result.lifespan[0]
+                    translation_batch_wait.observe(
+                        max(0.0, result.lifespan[0] - submitted_at)
+                    )
+                    first_output = False
+
+                partial = self._processor.decode(
+                    result.generated_tokens, skip_special_tokens=True
+                ).strip()
+                if partial:
+                    yield partial
+                if result.is_finished():
+                    completed = True
+                    if generation_started_at is not None:
+                        translation_generation.observe(
+                            max(0.0, time.perf_counter() - generation_started_at)
+                        )
+                    break
+        finally:
+            if not completed and manager.is_running():
+                manager.cancel_request(request_id)
+            translation_exit()
 
     # ── 내부 헬퍼 ──────────────────────────────────────────────────────────
     def _build_inputs(self, text: str, src_lang: str, tgt_lang: str):

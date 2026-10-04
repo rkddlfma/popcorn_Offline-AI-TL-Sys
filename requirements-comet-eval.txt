@@ -1,0 +1,3 @@
+# Install only in the isolated .venv-comet environment.
+# COMET 2.x requires Transformers <5 and must not replace the app's Transformers 5.
+unbabel-comet>=2.2.2,<3

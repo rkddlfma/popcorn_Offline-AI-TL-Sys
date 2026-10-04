@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "source": "오늘 수업에서는 데이터베이스 인덱스의 핵심 개념에 대해 알아보겠습니다.",
+    "reference_a": "In today's class, we will learn about the core concepts of database indexes.",
+    "reference_b": "In today's lecture, we will cover the key concepts of database indexing."
+  },
+  {
+    "id": 2,
+    "source": "인덱스가 없는 테이블에서 데이터를 검색하면 풀 테이블 스캔이 발생합니다.",
+    "reference_a": "Searching for data in a table without an index causes a full table scan.",
+    "reference_b": "If you query data in an unindexed table, a full table scan will occur."
+  },
+  {
+    "id": 3,
+    "source": "비트리와 같은 균형 트리 구조를 사용하면 검색 속도를 크게 향상시킬 수 있습니다.",
+    "reference_a": "Using a balanced tree structure like B-tree can significantly improve search speed.",
+    "reference_b": "Using balanced tree structures such as B-trees can greatly increase query performance."
+  },
+  {
+    "id": 4,
+    "source": "동시 접속자가 늘어날수록 GPU 메모리와 추론 대기시간 관리가 중요해집니다.",
+    "reference_a": "As concurrent users increase, managing GPU memory and inference latency becomes critical.",
+    "reference_b": "With more simultaneous connections, managing GPU memory and inference queue delay becomes essential."
+  },
+  {
+    "id": 5,
+    "source": "웹소켓 연결이 끊어지면 클라이언트는 자동으로 재연결을 시도해야 합니다.",
+    "reference_a": "When the WebSocket connection is dropped, the client should automatically attempt to reconnect.",
+    "reference_b": "If the WebSocket disconnects, the client needs to auto-reconnect."
+  },
+  {
+    "id": 6,
+    "source": "수신된 오디오 스트림은 실시간으로 음성 인식 모델에 전달되어 텍스트로 변환됩니다.",
+    "reference_a": "The received audio stream is delivered to the speech recognition model in real time and converted into text.",
+    "reference_b": "Incoming audio streams are passed to the speech-to-text model in real-time to generate transcriptions."
+  },
+  {
+    "id": 7,
+    "source": "번역 모델의 동시 처리 한계를 극복하기 위해 배치 추론 도입을 검토하고 있습니다.",
+    "reference_a": "We are considering introducing batch inference to overcome the concurrency limits of the translation model.",
+    "reference_b": "To bypass the translation model's concurrency bottleneck, we are evaluating batching approaches."
+  },
+  {
+    "id": 8,
+    "source": "자막 브로드캐스트 과정에서 발생하는 네트워크 지연을 최소화해야 합니다.",
+    "reference_a": "Network latency occurring during the subtitle broadcast process must be minimized.",
+    "reference_b": "We need to minimize network delays during subtitle broadcasting."
+  },
+  {
+    "id": 9,
+    "source": "프로메테우스 메트릭을 통해 각 단계별 처리 시간을 p95와 p99 지표로 관측합니다.",
+    "reference_a": "Through Prometheus metrics, we observe processing times for each stage using p95 and p99 metrics.",
+    "reference_b": "We monitor processing times at each step using p95 and p99 metrics via Prometheus."
+  },
+  {
+    "id": 10,
+    "source": "쓰기 작업이 빈번하게 발생하는 컬럼에는 인덱스를 남발하지 않는 것이 좋습니다.",
+    "reference_a": "It is recommended not to overuse indexes on columns with frequent write operations.",
+    "reference_b": "You should avoid creating excessive indexes on columns that undergo frequent writes."
+  }
+]

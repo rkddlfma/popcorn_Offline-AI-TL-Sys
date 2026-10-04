@@ -34,7 +34,8 @@ uvicorn app.main:app --reload
 
 | 값 | 설명 | 비고 |
 |----|------|------|
-| `transformers` | 단일 프로세스에서 4-bit 모델 직접 로드 | 별도 서버 불필요 |
+| `transformers` | Transformers continuous batching으로 4-bit 모델 실행 | Gemma 3 지원 및 최신 Transformers 필요, batch 상한 4 |
+| `transformers_legacy` | 단일 요청 GPU Lock 경로 | 이전 동작 비교나 롤백용 |
 | `vllm` | 외부 VLLM 서버에 추론 위임 | 처리량 우선, 먼저 `vllm serve` 필요 |
 
 VLLM 사용 시:
@@ -64,12 +65,24 @@ curl -X POST http://localhost:8000/translate \
 
 ## 평가
 
-번역 품질/지연을 측정하는 스크립트가 포함되어 있습니다 (FLORES-200 기반).
+번역 품질/지연 평가기는 `eval/test.json`의 원문-정답 쌍을 현재 실행 중인 FastAPI 앱에
+보냅니다. `.env`에서 `TRANSLATE_BACKEND=transformers`로 앱을 실행하세요. VLLM 서버는
+필요하지 않습니다. COMET의 Transformers 4 의존성이 앱의 Transformers 5와 충돌하지
+않도록 별도 가상환경을 사용합니다.
 
 ```bash
-python evaluate.py        # 텍스트 전용 BLEU/chrF/COMET
-python evaluate_e2e.py    # TTS→STT→번역 엔드투엔드 (WER 포함)
+.venv/bin/pip install -r requirements-eval.txt
+python3 -m venv .venv-comet
+.venv-comet/bin/pip install -r requirements-comet-eval.txt
+.venv/bin/python evaluate.py --url http://localhost:8000 --data eval/test.json --concurrency 3
 ```
+
+JSON은 `[ {"src": "한국어 원문", "ref": "English reference"} ]` 형식이며,
+`source`/`reference` 필드 이름도 지원합니다. CSV 입력이면 `src,ref` 열을 사용합니다.
+평가기는 요청 3개를 동시에 보내 배칭을 유도하고, BLEU/chrF/COMET,
+요청 지연 평균/p50/p95/p99 및 Prometheus batch 대기/생성 histogram 변화를 JSON으로
+저장합니다. COMET은 Transformers 버전 충돌을 막기 위해 `.venv-comet`에서 CPU로
+계산합니다. COMET 모델 가중치 최초 다운로드에는 인터넷 연결이 필요합니다.
 
 최근 결과는 [eval_results.json](eval_results.json), [eval_e2e_results.json](eval_e2e_results.json) 참고.
 

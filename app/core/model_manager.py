@@ -7,4 +7,6 @@ from app.core.config import settings
 def create_translation_backend() -> TranslationBackend:
     if settings.translate_backend == "vllm":
         return VLLMBackend()
-    return TransformersBackend()
+    if settings.translate_backend == "transformers_legacy":
+        return TransformersBackend(continuous_batching=False)
+    return TransformersBackend(continuous_batching=True)

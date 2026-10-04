@@ -348,6 +348,12 @@
       <div id="currentTgt">—</div>
     </div>
   </div>
+<!--
+  <div class="controls">
+    <input id="evaluationLabel" type="text" placeholder="실행 이름 (예: 이전 방식 / 배칭)" />
+    <button type="button" onclick="downloadLiveResults()">번역 결과 CSV 저장</button>
+    <span id="evaluationCount" class="active-room">저장할 번역 0개</span>
+  </div>-->
 
   <div class="history">
     <div class="history-label">이전 자막</div>
@@ -443,10 +449,15 @@
   const PREROLL_SIZE  = 4;  // 말 시작 직전 청크 수 (앞부분 잘림 방지)
 
   let ws, audioCtx, processor, stream, running = false, sending = false;
+  let audioSendQueue = Promise.resolve();
+  let queuedAudioSends = 0;
   let speaking = false, silenceCount = 0, audioChunks = [], lastSendTime = 0;
   let prerollBuffer = [];
   // 스트리밍 번역 상태
   let streaming = false, pendingSrc = '', curSrc = '', lastSrc = '', lastTgt = '';
+  let activeSrcLang = 'ko', activeTgtLang = 'en';
+  const sourceByEventId = new Map();
+  const liveEvaluationRows = [];
 
   function toggle() { running ? stop() : start(); }
 
@@ -454,6 +465,8 @@
     const url     = document.getElementById('serverUrl').value;
     const srcLang = document.getElementById('srcLang').value;
     const tgtLang = document.getElementById('tgtLang').value;
+    activeSrcLang = srcLang;
+    activeTgtLang = tgtLang;
     setStatus('connecting', '연결 중...');
 
     ws = new WebSocket(url);
@@ -473,18 +486,21 @@
       const data = JSON.parse(e.data);
       if (data.type === 'stt') {
         pendingSrc = data.text;
+        if (data.event_id) sourceByEventId.set(data.event_id, data.text);
         document.getElementById('currentSrc').textContent = data.text;
       } else if (data.type === 'translation') {
         if (!streaming) {
           // 새 번역 시작 — 직전 완료 자막을 히스토리로 이동
           if (lastTgt) addHistory(lastSrc, lastTgt);
-          curSrc = pendingSrc;
+          curSrc = (data.event_id && sourceByEventId.get(data.event_id)) || pendingSrc;
           streaming = true;
         }
         document.getElementById('currentTgt').textContent = data.text;
         if (data.done) {            // 번역 완료 — 다음 발화를 위해 확정
           lastSrc = curSrc;
           lastTgt = data.text;
+          saveLiveEvaluationResult(data, curSrc, data.text);
+          if (data.event_id) sourceByEventId.delete(data.event_id);
           streaming = false;
         }
       } else if (data.type === 'error') {
@@ -494,6 +510,52 @@
 
     ws.onclose = () => { setStatus('disconnected', '연결 끊김'); stop(); };
     ws.onerror = () => { setStatus('disconnected', '연결 오류'); stop(); };
+  }
+
+  function saveLiveEvaluationResult(message, sourceText, translatedText) {
+    const timing = message.timing || {};
+    const nowSeconds = Date.now() / 1000;
+    const milliseconds = (start, end) => Number.isFinite(start) && Number.isFinite(end)
+      ? Math.max(0, Math.round((end - start) * 1000)) : '';
+    liveEvaluationRows.push({
+      run: document.getElementById('evaluationLabel').value.trim() || '수동 테스트',
+      room: activeRoomId,
+      source_lang: activeSrcLang,
+      target_lang: activeTgtLang,
+      event_id: message.event_id || '',
+      source_text: sourceText,
+      translation: translatedText,
+      audio_to_stt_ms: milliseconds(timing.audio_received_at, timing.stt_completed_at),
+      translation_ms: milliseconds(timing.translation_queued_at, timing.translation_completed_at),
+      e2e_to_browser_ms: milliseconds(timing.audio_received_at, nowSeconds),
+      recorded_at: new Date().toISOString(),
+    });
+    document.getElementById('evaluationCount').textContent = `저장할 번역 ${liveEvaluationRows.length}개`;
+  }
+
+  function downloadLiveResults() {
+    if (!liveEvaluationRows.length) {
+      showError('저장할 번역 결과가 없습니다. 먼저 연결해 말해 주세요.');
+      return;
+    }
+    const columns = [
+      ['run', '실행'], ['room', 'Room'], ['source_lang', '원문 언어'],
+      ['target_lang', '번역 언어'], ['event_id', '발화 ID'], ['source_text', 'STT 원문'],
+      ['translation', '번역 결과'], ['audio_to_stt_ms', '오디오→STT(ms)'],
+      ['translation_ms', '번역 처리(ms)'], ['e2e_to_browser_ms', '오디오→화면(ms)'],
+      ['recorded_at', '저장 시각'],
+    ];
+    const quote = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
+    const csv = [columns.map(([, label]) => quote(label)).join(','),
+      ...liveEvaluationRows.map(row => columns.map(([key]) => quote(row[key])).join(','))
+    ].join('\r\n');
+    const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `translation-results-${new Date().toISOString().replaceAll(':', '-')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   function stop() {
@@ -555,16 +617,35 @@
   }
 
   async function sendAudio() {
-    if (audioChunks.length === 0 || sending) return;
-    sending = true;
+    if (audioChunks.length === 0) return audioSendQueue;
+
+    // 현재 오디오를 즉시 분리해 둡니다. 전송 중 새로 쌓이는 오디오는
+    // 다음 큐 작업이 가져가므로 발화 종료 청크가 기존 전송에 합쳐져 버리지 않습니다.
     const chunks = audioChunks; audioChunks = [];
     const total = chunks.reduce((s, c) => s + c.length, 0);
     const combined = new Float32Array(total);
     let offset = 0;
     for (const c of chunks) { combined.set(c, offset); offset += c.length; }
-    const resampled = await resampleTo16k(combined, audioCtx.sampleRate);
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(resampled.buffer);
-    sending = false;
+    const socket = ws;
+    const sourceRate = audioCtx.sampleRate;
+
+    queuedAudioSends++;
+    sending = true;
+    audioSendQueue = audioSendQueue
+      .then(async () => {
+        const resampled = await resampleTo16k(combined, sourceRate);
+        if (socket && socket === ws && socket.readyState === WebSocket.OPEN) {
+          socket.send(resampled.buffer);
+        }
+      })
+      .catch((error) => {
+        showError(`오디오 전송 실패: ${error.message || error}`);
+      })
+      .finally(() => {
+        queuedAudioSends--;
+        sending = queuedAudioSends > 0;
+      });
+    return audioSendQueue;
   }
 
   async function resampleTo16k(samples, fromRate) {
@@ -611,8 +692,8 @@
   /* ── 용어집 ── */
   const DEFAULT_GLOSSARY = {
     // 수업 일반
-    "강의":       "lecture",
-    "수업":       "class",
+    "강의":       { en: "lecture", ja: "講義", zh: "讲座" },
+    "수업":       { en: "class", ja: "授業", zh: "课程" },
     "교수":       "professor",
     "조교":       "teaching assistant",
     "학기":       "semester",
@@ -634,9 +715,31 @@
     "가설":       "hypothesis",
     "연구":       "research",
     "사례":       "case study",
+    "핵심 개념":  { en: "core concepts", ja: "重要な概念", zh: "核心概念" },
+    // 데이터베이스 / 인덱스
+    "데이터베이스": { en: "database", ja: "データベース", zh: "数据库" },
+    "검색 성능":  { en: "search performance", ja: "検索性能", zh: "搜索性能" },
+    "전공 서적":  { en: "textbook", ja: "専門書", zh: "专业书籍" },
+    "찾아보기":  { en: "index", ja: "索引", zh: "索引" },
+    "인덱스":    { en: "index", ja: "インデックス", zh: "索引" },
+    "테이블":    { en: "table", ja: "テーブル", zh: "表" },
+    "풀 테이블 스캔": { en: "full table scan", ja: "フルテーブルスキャン", zh: "全表扫描" },
+    "행":        { en: "row", ja: "行", zh: "行" },
+    "응답 시간":  { en: "response time", ja: "応答時間", zh: "响应时间" },
     // AI / CS
     "인공지능":   "artificial intelligence",
-    "머신러닝":   "machine learning",
+    "머신러닝":   { en: "machine learning", ja: "機械学習", zh: "机器学习" },
+    "기술":       { en: "technology", ja: "技術", zh: "技术" },
+    "컴퓨터":     { en: "computer", ja: "コンピューター", zh: "计算机" },
+    "스스로 학습": { en: "learn autonomously", ja: "自ら学習する", zh: "自主学习" },
+    "기존의 프로그래밍": { en: "conventional programming", ja: "従来のプログラミング", zh: "传统编程" },
+    "규칙":       { en: "rules", ja: "ルール", zh: "规则" },
+    "사람이 직접 작성한 규칙": { en: "rules explicitly written by people", ja: "人が直接記述したルール", zh: "由人编写的规则" },
+    "결과":       { en: "output", ja: "結果", zh: "输出结果" },
+    "수많은 데이터": { en: "vast amounts of data", ja: "膨大なデータ", zh: "大量数据" },
+    "패턴":       { en: "patterns", ja: "パターン", zh: "模式" },
+    "새로운 상황": { en: "new situations", ja: "新しい状況", zh: "新情况" },
+    "예측":       { en: "prediction", ja: "予測", zh: "预测" },
     "딥러닝":     "deep learning",
     "신경망":     "neural network",
     "알고리즘":   "algorithm",
@@ -670,7 +773,11 @@
     const src = document.getElementById('gSrc').value.trim();
     const tgt = document.getElementById('gTgt').value.trim();
     if (!src || !tgt) return;
-    glossary[src] = tgt;
+    const targetLang = document.getElementById('tgtLang').value;
+    const current = glossary[src];
+    glossary[src] = typeof current === 'string'
+      ? { en: current, [targetLang]: tgt }
+      : { ...(current || {}), [targetLang]: tgt };
     document.getElementById('gSrc').value = '';
     document.getElementById('gTgt').value = '';
     renderGlossaryTags();
@@ -683,11 +790,13 @@
 
   function renderGlossaryTags() {
     const container = document.getElementById('glossaryTags');
+    const targetLang = document.getElementById('tgtLang').value;
     container.innerHTML = '';
     for (const [src, tgt] of Object.entries(glossary)) {
       const tag = document.createElement('div');
       tag.className = 'glossary-tag';
-      tag.innerHTML = `<span>${escHtml(src)} → ${escHtml(tgt)}</span>`
+      const displayTarget = typeof tgt === 'string' ? tgt : (tgt[targetLang] || tgt.en || Object.values(tgt).join(' / '));
+      tag.innerHTML = `<span>${escHtml(src)} → ${escHtml(displayTarget)}</span>`
                     + `<button class="rm-btn" onclick="removeGlossaryTerm(${JSON.stringify(src)})">✕</button>`;
       container.appendChild(tag);
     }
@@ -698,6 +807,7 @@
   // 초기 렌더링 + Enter 키로 용어 추가
   document.addEventListener('DOMContentLoaded', () => {
     renderGlossaryTags();
+    document.getElementById('tgtLang').addEventListener('change', renderGlossaryTags);
     document.getElementById('gTgt').addEventListener('keydown', e => {
       if (e.key === 'Enter') addGlossaryTerm();
     });

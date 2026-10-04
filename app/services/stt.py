@@ -7,6 +7,9 @@ from app.metrics import stt_enter, stt_exit
 
 from app.core.config import settings
 
+REALTIME_STT_BEAM_SIZE = 5
+REALTIME_STT_INITIAL_PROMPT = "데이터베이스 수업 용어: 인덱스, 스캔, 전공 서적, 개념, 맨 뒤."
+
 
 class STTService:
     def __init__(self):
@@ -31,8 +34,14 @@ class STTService:
             stt_exit()
 
     def _transcribe_sync(self, audio: np.ndarray, language: str) -> str:
-        # 실시간 경로: greedy(beam_size=1)로 지연 최소화
-        segments, _ = self._model.transcribe(audio, language=language, beam_size=1, vad_filter=True)
+        # 실시간 경로: 용어 힌트로 도메인 단어 인식을 보강합니다.
+        segments, _ = self._model.transcribe(
+            audio,
+            language=language,
+            beam_size=REALTIME_STT_BEAM_SIZE,
+            initial_prompt=REALTIME_STT_INITIAL_PROMPT,
+            vad_filter=True,
+        )
         return " ".join(seg.text.strip() for seg in segments)
 
     def transcribe_segments(self, audio_path: str, language: str) -> list[dict]:
