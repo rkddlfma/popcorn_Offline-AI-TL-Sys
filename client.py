@@ -83,7 +83,7 @@ def recv_loop(ws: websocket.WebSocket, stop_event: threading.Event):
             break
 
 
-def run(server_url: str, src_lang: str, tgt_lang: str):
+def run(server_url: str, src_lang: str, tgt_lang: str, room_id: str):
     speech_queue = queue.Queue()
     stop_event   = threading.Event()
 
@@ -93,7 +93,7 @@ def run(server_url: str, src_lang: str, tgt_lang: str):
     print("Ctrl+C 로 종료\n")
 
     # 언어 설정 전송 (1회)
-    ws.send(json.dumps({"src_lang": src_lang, "tgt_lang": tgt_lang}))
+    ws.send(json.dumps({"room_id": room_id, "src_lang": src_lang, "tgt_lang": tgt_lang}))
 
     # 수신 스레드 시작 (송신과 독립적으로 응답 출력)
     recv_thread = threading.Thread(target=recv_loop, args=(ws, stop_event), daemon=True)
@@ -126,8 +126,10 @@ def main():
     parser.add_argument("--src", default="ko",                            help="입력 언어 (기본: ko)")
     parser.add_argument("--tgt", default="en",                            help="출력 언어 (기본: en)")
     parser.add_argument("--url", default="ws://localhost:8000/ws/subtitle", help="서버 WebSocket URL")
+    parser.add_argument("--room", choices=["1", "2", "3", "4", "5"], default="1",
+                        help="접속할 room 번호 (기본: 1)")
     args = parser.parse_args()
-    run(args.url, args.src, args.tgt)
+    run(args.url, args.src, args.tgt, args.room)
 
 
 if __name__ == "__main__":

@@ -72,3 +72,7 @@ python evaluate_e2e.py    # TTS→STT→번역 엔드투엔드 (WER 포함)
 ```
 
 최근 결과는 [eval_results.json](eval_results.json), [eval_e2e_results.json](eval_e2e_results.json) 참고.
+
+## 동시성 부하 측정
+
+Room별 WebSocket 및 GPU 병목 측정 방법은 [부하 측정 가이드](docs/load-testing.md)를 참고하세요. WAV 기반 부하 스크립트는 `scripts/load_test.py`이며 Prometheus 메트릭은 `/metrics`에서 확인할 수 있습니다.

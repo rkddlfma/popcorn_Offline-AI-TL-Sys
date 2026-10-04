@@ -10,3 +10,5 @@ numpy
 aiohttp
 python-multipart>=0.0.9
 aiofiles>=23.0.0
+prometheus-client>=0.20.0
+websockets>=12.0

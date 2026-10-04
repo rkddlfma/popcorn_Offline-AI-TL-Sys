@@ -29,6 +29,28 @@
 
     header h1 { font-size: 1.4rem; font-weight: 700; color: #a78bfa; }
 
+    .room-picker {
+      width: min(100%, 800px);
+      margin: auto;
+      padding: 32px;
+      text-align: center;
+      background: #1e2130;
+      border-radius: 16px;
+    }
+    .room-picker h2 { margin-bottom: 8px; }
+    .room-picker p { color: #94a3b8; margin-bottom: 24px; }
+    .room-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .room-buttons button {
+      min-height: 88px;
+      background: #2d3148;
+      color: #e2e8f0;
+      font-size: 1.2rem;
+    }
+    .room-buttons button:hover { background: #4c1d95; }
+    .active-room { color: #94a3b8; font-size: 0.9rem; }
+    .active-room button { margin-left: 8px; padding: 7px 12px; background: #2d3148; color: #e2e8f0; }
+    #teacherApp { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
     /* ── 탭 ── */
     .tabs {
       width: 100%;
@@ -252,8 +274,22 @@
 </head>
 <body>
 
+<section class="room-picker" id="roomPicker">
+  <h2>강의실 선택</h2>
+  <p>사용할 room을 선택하세요.</p>
+  <div class="room-buttons">
+    <button onclick="enterRoom('1')">Room 1</button>
+    <button onclick="enterRoom('2')">Room 2</button>
+    <button onclick="enterRoom('3')">Room 3</button>
+    <button onclick="enterRoom('4')">Room 4</button>
+    <button onclick="enterRoom('5')">Room 5</button>
+  </div>
+</section>
+
+<div id="teacherApp" style="display:none">
 <header>
   <h1>TranslateGemma</h1>
+  <div class="active-room">현재 Room <strong id="activeRoomLabel">1</strong><button onclick="returnToRoomPicker()">룸 변경</button></div>
 </header>
 
 <div class="tabs">
@@ -363,8 +399,24 @@
   </div>
 
 </div>
+</div>
 
 <script>
+  let activeRoomId = '1';
+
+  function enterRoom(roomId) {
+    activeRoomId = roomId;
+    document.getElementById('activeRoomLabel').textContent = roomId;
+    document.getElementById('roomPicker').style.display = 'none';
+    document.getElementById('teacherApp').style.display = 'flex';
+  }
+
+  function returnToRoomPicker() {
+    if (ws || running) stop();
+    document.getElementById('teacherApp').style.display = 'none';
+    document.getElementById('roomPicker').style.display = 'block';
+  }
+
   /* ── 탭 전환 ── */
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach((t, i) => {
@@ -409,7 +461,7 @@
 
     ws.onopen = async () => {
       const gData = Object.keys(glossary).length > 0 ? glossary : null;
-      ws.send(JSON.stringify({ src_lang: srcLang, tgt_lang: tgtLang, glossary: gData }));
+      ws.send(JSON.stringify({ room_id: activeRoomId, src_lang: srcLang, tgt_lang: tgtLang, glossary: gData }));
       setStatus('connected', '연결됨');
       await startMic();
       running = true;

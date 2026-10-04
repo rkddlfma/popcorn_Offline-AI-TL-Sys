@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 
 import torch
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
@@ -56,6 +57,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/health")
 async def health():
     return {"status": "ok", "backend": settings.translate_backend}
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/")

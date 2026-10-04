@@ -3,6 +3,7 @@ import threading
 from typing import AsyncIterator
 
 import torch
+from app.metrics import translation_enter, translation_exit, translation_inference, translation_queue_wait
 from transformers import (
     AutoModelForImageTextToText,
     AutoProcessor,
@@ -65,10 +66,18 @@ class TransformersBackend(TranslationBackend):
     ) -> str:
         await self._acquire_priority(priority)
         try:
+            queued_at = asyncio.get_running_loop().time()
             async with self._gpu_lock:
-                return await asyncio.get_event_loop().run_in_executor(
-                    None, self._translate_sync, text, src_lang, tgt_lang
-                )
+                translation_queue_wait.observe(asyncio.get_running_loop().time() - queued_at)
+                translation_enter()
+                started = asyncio.get_running_loop().time()
+                try:
+                    return await asyncio.get_event_loop().run_in_executor(
+                        None, self._translate_sync, text, src_lang, tgt_lang
+                    )
+                finally:
+                    translation_inference.observe(asyncio.get_running_loop().time() - started)
+                    translation_exit()
         finally:
             self._release_priority(priority)
 
@@ -78,36 +87,44 @@ class TransformersBackend(TranslationBackend):
     ) -> AsyncIterator[str]:
         await self._acquire_priority(priority)
         try:
+            queued_at = asyncio.get_running_loop().time()
             async with self._gpu_lock:
+                translation_queue_wait.observe(asyncio.get_running_loop().time() - queued_at)
+                translation_enter()
+                started = asyncio.get_running_loop().time()
                 loop = asyncio.get_event_loop()
-                inputs = await loop.run_in_executor(
-                    None, self._build_inputs, text, src_lang, tgt_lang
-                )
-                streamer = TextIteratorStreamer(
-                    self._processor, skip_special_tokens=True, skip_prompt=True
-                )
-                gen_kwargs = dict(
-                    **inputs, streamer=streamer, do_sample=False, max_new_tokens=256
-                )
-                thread = threading.Thread(target=self._model.generate, kwargs=gen_kwargs)
-                thread.start()
+                try:
+                    inputs = await loop.run_in_executor(
+                        None, self._build_inputs, text, src_lang, tgt_lang
+                    )
+                    streamer = TextIteratorStreamer(
+                        self._processor, skip_special_tokens=True, skip_prompt=True
+                    )
+                    gen_kwargs = dict(
+                        **inputs, streamer=streamer, do_sample=False, max_new_tokens=256
+                    )
+                    thread = threading.Thread(target=self._model.generate, kwargs=gen_kwargs)
+                    thread.start()
 
-                sentinel = object()
+                    sentinel = object()
 
-                def _next():
-                    try:
-                        return next(streamer)
-                    except StopIteration:
-                        return sentinel
+                    def _next():
+                        try:
+                            return next(streamer)
+                        except StopIteration:
+                            return sentinel
 
-                acc = ""
-                while True:
-                    token = await loop.run_in_executor(None, _next)
-                    if token is sentinel:
-                        break
-                    acc += token
-                    yield acc.strip()
-                thread.join()
+                    acc = ""
+                    while True:
+                        token = await loop.run_in_executor(None, _next)
+                        if token is sentinel:
+                            break
+                        acc += token
+                        yield acc.strip()
+                    thread.join()
+                finally:
+                    translation_inference.observe(asyncio.get_running_loop().time() - started)
+                    translation_exit()
         finally:
             self._release_priority(priority)
 

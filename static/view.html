@@ -30,6 +30,24 @@
       z-index: 10;
     }
 
+    .room-control {
+      position: fixed;
+      top: 12px;
+      left: 16px;
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+    }
+    .room-control button {
+      border: 1px solid #374151;
+      border-radius: 6px;
+      padding: 6px 9px;
+      background: #111827;
+      color: #fff;
+    }
+    .room-control button { cursor: pointer; }
+    .room-control button.active { background: #6d28d9; border-color: #a78bfa; }
+
     .dot {
       width: 8px; height: 8px;
       border-radius: 50%;
@@ -102,6 +120,14 @@
 </head>
 <body>
 
+<div class="room-control">
+  <button data-room="1" onclick="joinRoom('1')">1</button>
+  <button data-room="2" onclick="joinRoom('2')">2</button>
+  <button data-room="3" onclick="joinRoom('3')">3</button>
+  <button data-room="4" onclick="joinRoom('4')">4</button>
+  <button data-room="5" onclick="joinRoom('5')">5</button>
+</div>
+
 <div class="status-bar">
   <div class="dot waiting" id="dot"></div>
   <span id="statusText">연결 중...</span>
@@ -112,11 +138,14 @@
 
 <script>
   const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl   = `${wsProto}//${location.host}/ws/viewer`;
+  const requestedRoom = new URLSearchParams(location.search).get('room_id');
+  let activeRoomId = ['1', '2', '3', '4', '5'].includes(requestedRoom) ? requestedRoom : '1';
 
   let currentItem = null;
   let pendingSrc  = '';
   let streaming   = false;
+  let ws = null;
+  let reconnectTimer = null;
 
   function addSubtitle(src, tgt) {
     const list = document.getElementById('subtitleList');
@@ -149,15 +178,34 @@
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  function connect() {
-    const ws = new WebSocket(wsUrl);
+  function joinRoom(roomId) {
+    activeRoomId = roomId;
+    const params = new URLSearchParams(location.search);
+    params.set('room_id', roomId);
+    history.replaceState(null, '', `${location.pathname}?${params}`);
+    document.querySelectorAll('.room-control button').forEach(button => {
+      button.classList.toggle('active', button.dataset.room === roomId);
+    });
+    clearTimeout(reconnectTimer);
+    const previous = ws;
+    ws = null;
+    if (previous) previous.close();
+    connect();
+  }
 
-    ws.onopen = () => {
+  function connect() {
+    const wsUrl = `${wsProto}//${location.host}/ws/viewer?room_id=${encodeURIComponent(activeRoomId)}`;
+    const socket = new WebSocket(wsUrl);
+    ws = socket;
+
+    socket.onopen = () => {
+      if (socket !== ws) return;
       document.getElementById('dot').className = 'dot connected';
       document.getElementById('statusText').textContent = '연결됨';
     };
 
-    ws.onmessage = (e) => {
+    socket.onmessage = (e) => {
+      if (socket !== ws) return;
       const data = JSON.parse(e.data);
       if (data.type === 'stt') {
         pendingSrc = data.text;
@@ -178,16 +226,17 @@
       }
     };
 
-    ws.onclose = () => {
+    socket.onclose = () => {
+      if (socket !== ws) return;
       document.getElementById('dot').className = 'dot waiting';
       document.getElementById('statusText').textContent = '재연결 중...';
-      setTimeout(connect, 2000);
+      reconnectTimer = setTimeout(connect, 2000);
     };
 
-    ws.onerror = () => ws.close();
+    socket.onerror = () => socket.close();
   }
 
-  connect();
+  joinRoom(activeRoomId);
 </script>
 </body>
 </html>

@@ -3,6 +3,7 @@ import asyncio
 import numpy as np
 import torch
 from faster_whisper import WhisperModel
+from app.metrics import stt_enter, stt_exit
 
 from app.core.config import settings
 
@@ -21,9 +22,13 @@ class STTService:
         print("[STTService] 로드 완료")
 
     async def transcribe(self, audio: np.ndarray, language: str) -> str:
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self._transcribe_sync, audio, language
-        )
+        stt_enter()
+        try:
+            return await asyncio.get_event_loop().run_in_executor(
+                None, self._transcribe_sync, audio, language
+            )
+        finally:
+            stt_exit()
 
     def _transcribe_sync(self, audio: np.ndarray, language: str) -> str:
         # 실시간 경로: greedy(beam_size=1)로 지연 최소화
